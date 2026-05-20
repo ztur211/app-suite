@@ -26,12 +26,5 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": false
   },
-  "exclude": [
-    "node_modules",
-    "**/dist",
-    "**/build",
-    "**/.expo",
-    "**/.next",
-    "**/coverage"
-  ]
+  "exclude": ["node_modules", "**/dist", "**/build", "**/.expo", "**/.next", "**/coverage"]
 }

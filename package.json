@@ -13,7 +13,7 @@
     "dev": "echo 'Use a workspace-specific dev script, e.g. `npm run dev -w apps/api-auth`'",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "lint": "npm run lint --workspaces --if-present && eslint .",
+    "lint": "eslint .",
     "prepare": "husky",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:unit --workspaces --if-present",
