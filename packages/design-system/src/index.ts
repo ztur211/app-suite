@@ -21,3 +21,6 @@ export {
   type ThemeContextValue,
   type ThemeProviderProps,
 } from './theme/ThemeProvider';
+
+// Primitives
+export { Heading, type HeadingProps, type HeadingLevel } from './primitives/Heading/Heading';
