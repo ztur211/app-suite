@@ -1,0 +1,27 @@
+{
+  "name": "@things/say-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist .tsbuildinfo",
+    "lint": "eslint src --max-warnings 0",
+    "test": "npm run test:unit",
+    "test:unit": "jest --config jest.unit.config.ts",
+    "test:integration": "jest --config jest.integration.config.ts --passWithNoTests",
+    "test:e2e": "jest --config jest.e2e.config.ts --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.13",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  }
+}
