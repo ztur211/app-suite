@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Eat Things",
+    "slug": "eat-things",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "eat-things",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "app.things.eat",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "app.things.eat",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
