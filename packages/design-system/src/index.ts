@@ -24,3 +24,7 @@ export {
 
 // Primitives
 export { Heading, type HeadingProps, type HeadingLevel } from './primitives/Heading/Heading';
+export { Button, type ButtonProps, type ButtonVariant } from './primitives/Button/Button';
+
+// Animation hooks
+export { usePressFeedback } from './animation/usePressFeedback';
