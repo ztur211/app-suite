@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Buy Things",
+    "slug": "buy-things",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "buy-things",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "app.things.buy",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "app.things.buy",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
