@@ -2,13 +2,16 @@ import type { Config } from 'jest';
 
 const config: Config = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
   rootDir: 'src',
-  testRegex: '.*\\.(test|spec)\\.ts$',
+  testRegex: '.*\\.(test|spec)\\.(ts|tsx)$',
   testPathIgnorePatterns: ['/node_modules/'],
-  collectCoverageFrom: ['**/*.ts', '!**/__tests__/**', '!**/*.d.ts'],
+  collectCoverageFrom: ['**/*.{ts,tsx}', '!**/__tests__/**', '!**/*.d.ts'],
   coverageDirectory: '../coverage/unit',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: { jsx: 'react-jsx' } }],
+  },
 };
 
 export default config;
