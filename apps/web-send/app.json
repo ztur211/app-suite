@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Send Things",
+    "slug": "send-things",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "send-things",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "app.things.send",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "app.things.send",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
