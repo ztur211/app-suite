@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Say Things",
+    "slug": "say-things",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "say-things",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "app.things.say",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "app.things.say",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
