@@ -7,6 +7,7 @@ export const prisma = new PrismaClient();
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'sqlite' }),
   emailAndPassword: { enabled: true },
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   secret: process.env['BETTER_AUTH_SECRET']!,
   baseURL: process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3001',
   // Mount at /auth (not the default /api/auth) — matches the NestJS controller
