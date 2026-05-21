@@ -44,5 +44,11 @@ android/
 # Prisma generated client (will be regenerated)
 **/generated/
 
+# SQLite database files (dev/test only — never commit DB files)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 # Husky internals
 .husky/_/
