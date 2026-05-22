@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@things/design-system": "*",
+    "zustand": "^5.0.0",
     "expo": "~55.0.24",
     "expo-router": "~55.0.14",
     "expo-linking": "~55.0.15",
