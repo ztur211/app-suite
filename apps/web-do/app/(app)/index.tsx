@@ -81,7 +81,7 @@ export default function Today() {
           keyExtractor={(t) => t.id}
           ItemSeparatorComponent={() => <View style={{ height: tokens.space[2] }} />}
           renderItem={({ item }) => (
-            <Card pressable onPress={() => toggle(item)}>
+            <Card pressable onPress={() => toggle(item)} testID={`task-card-${item.id}`}>
               <View
                 style={{
                   flexDirection: 'row',

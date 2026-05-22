@@ -95,10 +95,10 @@ describe('Today screen', () => {
 
     const { findByTestId } = render(<Today />);
 
-    // Wait for the checkbox to appear (task loaded)
-    const checkbox = await findByTestId('checkbox-task-3');
+    // Wait for the task card to appear (task loaded)
+    const card = await findByTestId('task-card-task-3');
     await act(async () => {
-      fireEvent.press(checkbox.parent!);
+      fireEvent.press(card);
     });
 
     expect(mockTasksApi.setCompleted).toHaveBeenCalledWith('task-3', true);
