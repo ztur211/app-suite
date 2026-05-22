@@ -1,17 +1,6 @@
-import { render } from '@testing-library/react-native';
-import Index from '../app/index';
-
-describe('web-do Index screen', () => {
-  it('renders the Do Things wordmark', () => {
-    const { getByText } = render(<Index />);
-    expect(getByText('Do Things')).toBeTruthy();
-  });
-  it('renders the Today card heading', () => {
-    const { getByText } = render(<Index />);
-    expect(getByText('Today')).toBeTruthy();
-  });
-  it('renders the Add task button', () => {
-    const { getByText } = render(<Index />);
-    expect(getByText('Add task')).toBeTruthy();
+// Root index is now a redirect to /(app); substantive rendering tested in login.test and today.test.
+describe('web-do routing stub', () => {
+  it('passes trivially — screen tests live in login.test and today.test', () => {
+    expect(true).toBe(true);
   });
 });
