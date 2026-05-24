@@ -60,3 +60,30 @@ model Verification {
 
   @@unique([identifier, value])
 }
+
+// ---- AI usage audit (foundation spec §5.2) ----
+// Written by services that use @things/ai via an injected usage logger.
+// Lives in things_auth so the suite has one cross-app cost-center.
+
+model AiCall {
+  id          String   @id @default(cuid())
+  userId      String?
+  callerApp   String
+  operation   String
+  provider    String
+  model       String
+  // Usage fields — only the ones relevant for the operation are populated.
+  inputTokens     Int?
+  outputTokens    Int?
+  cacheReadTokens Int?
+  cacheWriteTokens Int?
+  audioSeconds Float?
+  vectorCount  Int?
+  durationMs   Int
+  fellBackTo   String?  // "<provider>:<model>" or null
+  startedAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([callerApp, createdAt])
+}
