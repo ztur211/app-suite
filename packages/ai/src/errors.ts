@@ -1,10 +1,7 @@
 export class AiError extends Error {
   constructor(message: string, opts?: { cause?: unknown }) {
-    super(message);
+    super(message, opts);
     this.name = 'AiError';
-    if (opts?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = opts.cause;
-    }
   }
 }
 
@@ -62,6 +59,8 @@ export function isTransientProviderError(err: unknown): boolean {
   if (!(err instanceof ProviderError)) return false;
   // Network errors have no status — treat as transient.
   if (err.status === undefined) return true;
+  // 408 Request Timeout and 425 Too Early are conventionally retryable.
+  if (err.status === 408 || err.status === 425) return true;
   // Rate limits and server errors are transient.
   if (err.status === 429) return true;
   if (err.status >= 500 && err.status < 600) return true;

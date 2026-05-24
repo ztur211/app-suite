@@ -49,25 +49,12 @@ describe('AI errors', () => {
     expect(e.message).toContain('transcribe');
   });
 
-  it('isTransientProviderError flags 429 and 5xx as transient', () => {
-    const t429 = new ProviderError({
-      provider: 'anthropic',
-      status: 429,
-      message: 'x',
-    });
-    const t500 = new ProviderError({
-      provider: 'anthropic',
-      status: 500,
-      message: 'x',
-    });
-    const t503 = new ProviderError({
-      provider: 'anthropic',
-      status: 503,
-      message: 'x',
-    });
-    expect(isTransientProviderError(t429)).toBe(true);
-    expect(isTransientProviderError(t500)).toBe(true);
-    expect(isTransientProviderError(t503)).toBe(true);
+  it('isTransientProviderError flags 408, 425, 429, and 5xx as transient', () => {
+    const statuses = [408, 425, 429, 500, 502, 503, 504];
+    for (const status of statuses) {
+      const e = new ProviderError({ provider: 'anthropic', status, message: 'x' });
+      expect(isTransientProviderError(e)).toBe(true);
+    }
   });
 
   it('isTransientProviderError flags 400/401/403/404 as non-transient', () => {
