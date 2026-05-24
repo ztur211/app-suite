@@ -113,3 +113,18 @@ CI runs `lint`, `test:unit`, `test:integration` on every PR. `test:e2e` runs on 
 - Foundation spec: `../project-ideas/docs/superpowers/specs/2026-05-20-things-suite-foundation-design.md`
 - P1 implementation plan: `../project-ideas/docs/superpowers/plans/2026-05-20-things-suite-p1-monorepo-bootstrap.md`
 - Per-app brainstorms (one per app): `../project-ideas/docs/superpowers/specs/YYYY-MM-DD-<app>-design.md` (forthcoming)
+
+---
+
+## P4 status (2026-05-23)
+
+`@things/ai` complete: provider-agnostic AI client at `packages/ai/` with
+`createAiClient({ providers, usageLogger? })` returning an `AiClient`
+implementing the foundation spec §5.1 interface. Default routing:
+chat/summarize/chatStructured → Claude Haiku 4.5 (fallback Sonnet 4.6),
+transcribe → Whisper, embed → text-embedding-3-small, vision → Gemini 2.5
+Flash (fallback Sonnet 4.6). Direct provider SDK imports outside
+`packages/ai/src/providers/` are blocked by ESLint. `AiCall` table lives in
+`things_auth`; consumer apps that want to persist usage rows mirror it into
+their own Prisma schema and pass a usage logger that writes via their Prisma
+client.
