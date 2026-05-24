@@ -2,10 +2,18 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { ZodSchema } from 'zod';
 import { ProviderError } from '../errors';
-import type { Message, SummaryFormat, Usage } from '../types';
-import type { AnthropicProvider, ChatFn, ChatStructuredFn, SummarizeFn } from './types';
+import type { ChatOpts, Message, SummaryFormat, Usage } from '../types';
+import type {
+  AnthropicProvider,
+  ChatFn,
+  ChatStructuredFn,
+  OperationContext,
+  SummarizeFn,
+} from './types';
+import { makeProviderErrorWrapper } from './_helpers';
 
 const PROVIDER_ID = 'anthropic';
+const wrapError: (err: unknown) => never = makeProviderErrorWrapper(PROVIDER_ID);
 
 interface AnthropicMessagesUsage {
   input_tokens: number;
@@ -43,23 +51,6 @@ function extractSystem(messages: Message[]): {
     }
   }
   return { system, rest };
-}
-
-function wrapError(err: unknown): never {
-  if (err instanceof Error) {
-    const status = (err as { status?: number }).status;
-    throw new ProviderError({
-      provider: PROVIDER_ID,
-      status,
-      message: err.message,
-      cause: err,
-    });
-  }
-  throw new ProviderError({
-    provider: PROVIDER_ID,
-    message: String(err),
-    cause: err,
-  });
 }
 
 export function createAnthropicProvider(client: Anthropic): AnthropicProvider {
@@ -115,8 +106,8 @@ export function createAnthropicProvider(client: Anthropic): AnthropicProvider {
   const chatStructured: ChatStructuredFn = async <T>(
     schema: ZodSchema<T>,
     messages: Message[],
-    opts: { temperature?: number; maxOutputTokens?: number },
-    ctx: { model: string; timeoutMs: number },
+    opts: ChatOpts,
+    ctx: OperationContext,
   ) => {
     const { system, rest } = extractSystem(messages);
     // Cast through `unknown` because zod-to-json-schema's generic constraints
