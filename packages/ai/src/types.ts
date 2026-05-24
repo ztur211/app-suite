@@ -25,6 +25,11 @@ export type Usage =
       vectorCount: number;
     };
 
+export interface AiCallContext {
+  userId?: string;
+  callerApp?: string;
+}
+
 export interface ChatOpts {
   /** Per-call override; otherwise router default. */
   model?: string;
@@ -38,6 +43,8 @@ export interface ChatOpts {
   timeoutMs?: number;
   /** Stop sequences forwarded to the provider where supported. */
   stop?: string[];
+  /** Per-call context attached to the usage log entry. */
+  context?: AiCallContext;
 }
 
 export interface TranscribeOpts {
@@ -47,6 +54,8 @@ export interface TranscribeOpts {
   prompt?: string;
   /** Per-call timeout override in ms. */
   timeoutMs?: number;
+  /** Per-call context attached to the usage log entry. */
+  context?: AiCallContext;
 }
 
 export interface Segment {
