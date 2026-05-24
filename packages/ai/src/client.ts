@@ -10,16 +10,16 @@ import {
 } from './router';
 import type { RetryOpts } from './retry';
 import { noopUsageLogger, type AiOperation, type UsageLogger } from './usage-logger';
-import type {
-  AiCallContext,
+import {
   AiClient,
-  ChatOpts,
-  ImageInput,
-  Message,
-  Segment,
-  SummaryFormat,
-  TranscribeOpts,
-  Usage,
+  type ChatOpts,
+  type ImageInput,
+  type Message,
+  type Segment,
+  type SummaryFormat,
+  type TranscribeOpts,
+  type Usage,
+  type AiCallContext,
 } from './types';
 import type {
   AnthropicProvider,
@@ -27,6 +27,7 @@ import type {
   OpenAIProvider,
   OperationContext,
 } from './providers/types';
+import { buildProvidersFromKeys, type ProviderApiKeys } from './providers/build-from-keys';
 
 export interface AiClientProviders {
   anthropic?: AnthropicProvider;
@@ -34,14 +35,21 @@ export interface AiClientProviders {
   google?: GoogleProvider;
 }
 
-export interface CreateAiClientOpts {
-  providers: AiClientProviders;
+/** Common options shared between both `createAiClient` overloads. */
+interface CommonAiClientOpts {
   routes?: RouteConfig;
   usageLogger?: UsageLogger;
   /** Default timeout per call in ms. Default 30000. */
   timeoutMs?: number;
   retry?: RetryOpts;
 }
+
+export interface CreateAiClientOpts extends CommonAiClientOpts {
+  providers: AiClientProviders;
+}
+
+/** Sugar overload: pass raw API keys and the package builds providers internally. */
+export interface CreateAiClientWithKeysOpts extends CommonAiClientOpts, ProviderApiKeys {}
 
 interface RunOpts<T> {
   operation: AiOperation;
@@ -52,18 +60,28 @@ interface RunOpts<T> {
   run: (entry: RouteEntry, opCtx: OperationContext) => Promise<{ value: T; usage: Usage }>;
 }
 
-export function createAiClient(opts: CreateAiClientOpts): AiClient {
-  const routes = opts.routes ?? defaultRouteConfig;
-  const usageLogger = opts.usageLogger ?? noopUsageLogger;
-  const defaultTimeoutMs = opts.timeoutMs ?? 30000;
-  const retryOpts = opts.retry ?? { maxRetries: 2, baseDelayMs: 250 };
+class AiClientImpl extends AiClient {
+  private readonly providers: AiClientProviders;
+  private readonly routes: RouteConfig;
+  private readonly usageLogger: UsageLogger;
+  private readonly defaultTimeoutMs: number;
+  private readonly retryOpts: RetryOpts;
 
-  function ensureProviderOperation(
+  constructor(opts: CreateAiClientOpts) {
+    super();
+    this.providers = opts.providers;
+    this.routes = opts.routes ?? defaultRouteConfig;
+    this.usageLogger = opts.usageLogger ?? noopUsageLogger;
+    this.defaultTimeoutMs = opts.timeoutMs ?? 30000;
+    this.retryOpts = opts.retry ?? { maxRetries: 2, baseDelayMs: 250 };
+  }
+
+  private ensureProviderOperation(
     provider: ProviderId,
     opKey: string,
     operation: AiOperation,
   ): unknown {
-    const p = opts.providers[provider as keyof AiClientProviders];
+    const p = this.providers[provider as keyof AiClientProviders];
     const fn = p ? (p as unknown as Record<string, unknown>)[opKey] : undefined;
     if (typeof fn !== 'function') {
       throw new RouteUnavailableError(operation);
@@ -71,7 +89,7 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
     return fn;
   }
 
-  async function runWithRoute<T>(
+  private async runWithRoute<T>(
     o: RunOpts<T>,
   ): Promise<{ value: T; usage: Usage; usedEntry: RouteEntry; fellBackTo?: RouteEntry }> {
     const startedAt = new Date();
@@ -83,11 +101,11 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
     const result = await executeRoute({
       primary: o.route.primary,
       fallback: o.route.fallback,
-      retryOpts,
+      retryOpts: this.retryOpts,
       runner: async (entry) => o.run(entry, opCtxFor(entry)),
     });
     const durationMs = Date.now() - start;
-    await usageLogger({
+    await this.usageLogger({
       operation: o.operation,
       provider: result.usedEntry.provider,
       model: result.usedEntry.model,
@@ -106,16 +124,16 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
     };
   }
 
-  const chat: AiClient['chat'] = async (messages, callOpts) => {
+  async chat(messages: Message[], callOpts?: ChatOpts): Promise<{ text: string; usage: Usage }> {
     const opts2 = callOpts ?? {};
-    const timeoutMs = opts2.timeoutMs ?? defaultTimeoutMs;
-    const { value, usage } = await runWithRoute<string>({
+    const timeoutMs = opts2.timeoutMs ?? this.defaultTimeoutMs;
+    const { value, usage } = await this.runWithRoute<string>({
       operation: 'chat',
-      route: routes.chat,
+      route: this.routes.chat,
       context: opts2.context,
       timeoutMs,
       run: async (entry, opCtx) => {
-        const fn = ensureProviderOperation(
+        const fn = this.ensureProviderOperation(
           entry.provider,
           'chat',
           'chat',
@@ -125,22 +143,22 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
       },
     });
     return { text: value, usage };
-  };
+  }
 
-  const chatStructured: AiClient['chatStructured'] = async <T>(
+  async chatStructured<T>(
     schema: ZodSchema<T>,
     messages: Message[],
     callOpts?: ChatOpts,
-  ) => {
+  ): Promise<{ value: T; usage: Usage }> {
     const opts2 = callOpts ?? {};
-    const timeoutMs = opts2.timeoutMs ?? defaultTimeoutMs;
-    const { value, usage } = await runWithRoute<T>({
+    const timeoutMs = opts2.timeoutMs ?? this.defaultTimeoutMs;
+    const { value, usage } = await this.runWithRoute<T>({
       operation: 'chatStructured',
-      route: routes.chatStructured,
+      route: this.routes.chatStructured,
       context: opts2.context,
       timeoutMs,
       run: async (entry, opCtx) => {
-        const fn = ensureProviderOperation(
+        const fn = this.ensureProviderOperation(
           entry.provider,
           'chatStructured',
           'chatStructured',
@@ -149,16 +167,16 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
       },
     });
     return { value, usage };
-  };
+  }
 
-  const summarize: AiClient['summarize'] = async (text, format: SummaryFormat) => {
-    const { value, usage } = await runWithRoute<string>({
+  async summarize(text: string, format: SummaryFormat): Promise<{ summary: string; usage: Usage }> {
+    const { value, usage } = await this.runWithRoute<string>({
       operation: 'summarize',
-      route: routes.summarize,
+      route: this.routes.summarize,
       context: undefined,
-      timeoutMs: defaultTimeoutMs,
+      timeoutMs: this.defaultTimeoutMs,
       run: async (entry, opCtx) => {
-        const fn = ensureProviderOperation(
+        const fn = this.ensureProviderOperation(
           entry.provider,
           'summarize',
           'summarize',
@@ -168,22 +186,25 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
       },
     });
     return { summary: value, usage };
-  };
+  }
 
-  const transcribe: AiClient['transcribe'] = async (audio, callOpts) => {
+  async transcribe(
+    audio: Buffer,
+    callOpts?: TranscribeOpts,
+  ): Promise<{ text: string; segments: Segment[]; language: string; usage: Usage }> {
     const opts2: TranscribeOpts = callOpts ?? {};
-    const timeoutMs = opts2.timeoutMs ?? defaultTimeoutMs;
-    const { value, usage } = await runWithRoute<{
+    const timeoutMs = opts2.timeoutMs ?? this.defaultTimeoutMs;
+    const { value, usage } = await this.runWithRoute<{
       text: string;
       segments: Segment[];
       language: string;
     }>({
       operation: 'transcribe',
-      route: routes.transcribe,
+      route: this.routes.transcribe,
       context: opts2.context,
       timeoutMs,
       run: async (entry, opCtx) => {
-        const fn = ensureProviderOperation(
+        const fn = this.ensureProviderOperation(
           entry.provider,
           'transcribe',
           'transcribe',
@@ -201,16 +222,16 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
       language: value.language,
       usage,
     };
-  };
+  }
 
-  const embed: AiClient['embed'] = async (texts) => {
-    const { value, usage } = await runWithRoute<number[][]>({
+  async embed(texts: string[]): Promise<{ vectors: number[][]; usage: Usage }> {
+    const { value, usage } = await this.runWithRoute<number[][]>({
       operation: 'embed',
-      route: routes.embed,
+      route: this.routes.embed,
       context: undefined,
-      timeoutMs: defaultTimeoutMs,
+      timeoutMs: this.defaultTimeoutMs,
       run: async (entry, opCtx) => {
-        const fn = ensureProviderOperation(
+        const fn = this.ensureProviderOperation(
           entry.provider,
           'embed',
           'embed',
@@ -220,16 +241,16 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
       },
     });
     return { vectors: value, usage };
-  };
+  }
 
-  const vision: AiClient['vision'] = async (imageOrUrl: ImageInput, prompt: string) => {
-    const { value, usage } = await runWithRoute<string>({
+  async vision(imageOrUrl: ImageInput, prompt: string): Promise<{ text: string; usage: Usage }> {
+    const { value, usage } = await this.runWithRoute<string>({
       operation: 'vision',
-      route: routes.vision,
+      route: this.routes.vision,
       context: undefined,
-      timeoutMs: defaultTimeoutMs,
+      timeoutMs: this.defaultTimeoutMs,
       run: async (entry, opCtx) => {
-        const fn = ensureProviderOperation(
+        const fn = this.ensureProviderOperation(
           entry.provider,
           'vision',
           'vision',
@@ -239,7 +260,21 @@ export function createAiClient(opts: CreateAiClientOpts): AiClient {
       },
     });
     return { text: value, usage };
-  };
+  }
+}
 
-  return { chat, chatStructured, summarize, transcribe, embed, vision };
+export function createAiClient(opts: CreateAiClientOpts): AiClient;
+export function createAiClient(opts: CreateAiClientWithKeysOpts): AiClient;
+export function createAiClient(opts: CreateAiClientOpts | CreateAiClientWithKeysOpts): AiClient {
+  if ('providers' in opts) {
+    return new AiClientImpl(opts);
+  }
+  const providers = buildProvidersFromKeys(opts);
+  return new AiClientImpl({
+    providers,
+    routes: opts.routes,
+    usageLogger: opts.usageLogger,
+    timeoutMs: opts.timeoutMs,
+    retry: opts.retry,
+  });
 }

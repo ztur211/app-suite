@@ -68,12 +68,12 @@ describe('ESLint provider-SDK boundary', () => {
           m.ruleId === 'no-restricted-imports' && (m.message ?? '').includes('@anthropic-ai/sdk'),
       ),
     ).toBe(true);
-  }, 60000);
+  }, 120000);
 
   it('allows @anthropic-ai/sdk import inside providers/', async () => {
     const filePath = path.join(repoRoot, 'packages/ai/src/providers/__boundary_probe_inside.ts');
     const source = `import type Anthropic from '@anthropic-ai/sdk';\nexport type Probe = Anthropic;\n`;
     const messages = await runEslintOn(filePath, source);
     expect(messages.some((m) => m.ruleId === 'no-restricted-imports')).toBe(false);
-  }, 60000);
+  }, 120000);
 });

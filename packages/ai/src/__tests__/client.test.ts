@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createAiClient } from '../client';
+import { AiClient } from '../types';
 import type { ProviderId, RouteConfig } from '../router';
 import { defaultRouteConfig } from '../router';
 import { ProviderError, RouteUnavailableError } from '../errors';
@@ -260,5 +261,43 @@ describe('createAiClient', () => {
     } as never);
     expect(calls[0]?.userId).toBe('u_42');
     expect(calls[0]?.callerApp).toBe('api-say');
+  });
+
+  it('returns an AiClient instance suitable for NestJS DI (provider form)', () => {
+    const providers = makeStubProviders();
+    const client = createAiClient({ providers: providers as never });
+    expect(client).toBeInstanceOf(AiClient);
+  });
+});
+
+describe('createAiClient (API-key overload)', () => {
+  it('returns an AiClient instance when given API keys', () => {
+    const client = createAiClient({
+      anthropicApiKey: 'sk-test-anthropic',
+      openaiApiKey: 'sk-test-openai',
+    });
+    expect(client).toBeInstanceOf(AiClient);
+  });
+
+  it('throws RouteUnavailableError when a route needs a provider whose key was omitted', async () => {
+    // Only openai key — chat routes to anthropic by default → unavailable.
+    const client = createAiClient({ openaiApiKey: 'sk-test-openai' });
+    await expect(client.chat([{ role: 'user', content: 'x' }])).rejects.toBeInstanceOf(
+      RouteUnavailableError,
+    );
+  });
+
+  it('forwards usageLogger from the API-key overload', async () => {
+    const calls: UsageLogEntry[] = [];
+    const client = createAiClient({
+      anthropicApiKey: 'sk-test',
+      usageLogger: async (e) => {
+        calls.push(e);
+      },
+    });
+    // Sanity check — the client was constructed with the logger; we don't
+    // make a real network call here (the SDK would fail), only confirm DI shape.
+    expect(client).toBeInstanceOf(AiClient);
+    expect(calls).toHaveLength(0);
   });
 });

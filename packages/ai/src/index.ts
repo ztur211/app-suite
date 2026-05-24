@@ -1,12 +1,12 @@
 export { createAiClient } from './client';
-export type { AiClientProviders, CreateAiClientOpts } from './client';
+export type { AiClientProviders, CreateAiClientOpts, CreateAiClientWithKeysOpts } from './client';
 
 export { defaultRouteConfig, executeRoute } from './router';
 export type { ProviderId, RouteConfig, RouteEntry, RouteOptions } from './router';
 
+export { AiClient } from './types';
 export type {
   AiCallContext,
-  AiClient,
   ChatOpts,
   ImageInput,
   Message,

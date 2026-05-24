@@ -70,8 +70,15 @@ export type SummaryFormat = 'bullet' | 'paragraph' | 'tldr';
 
 export type ImageInput = { url: string } | { data: Buffer; mimeType: string };
 
-export interface AiClient {
-  transcribe(
+/**
+ * Public AI client surface.
+ *
+ * Abstract class (not interface) so it can serve as a NestJS DI token while
+ * still acting as the type contract. Construct via `createAiClient(...)`;
+ * mock in tests by extending or `as unknown as AiClient` casting.
+ */
+export abstract class AiClient {
+  abstract transcribe(
     audio: Buffer,
     opts?: TranscribeOpts,
   ): Promise<{
@@ -81,17 +88,20 @@ export interface AiClient {
     usage: Usage;
   }>;
 
-  chat(messages: Message[], opts?: ChatOpts): Promise<{ text: string; usage: Usage }>;
+  abstract chat(messages: Message[], opts?: ChatOpts): Promise<{ text: string; usage: Usage }>;
 
-  chatStructured<T>(
+  abstract chatStructured<T>(
     schema: ZodSchema<T>,
     messages: Message[],
     opts?: ChatOpts,
   ): Promise<{ value: T; usage: Usage }>;
 
-  summarize(text: string, format: SummaryFormat): Promise<{ summary: string; usage: Usage }>;
+  abstract summarize(
+    text: string,
+    format: SummaryFormat,
+  ): Promise<{ summary: string; usage: Usage }>;
 
-  embed(texts: string[]): Promise<{ vectors: number[][]; usage: Usage }>;
+  abstract embed(texts: string[]): Promise<{ vectors: number[][]; usage: Usage }>;
 
-  vision(imageOrUrl: ImageInput, prompt: string): Promise<{ text: string; usage: Usage }>;
+  abstract vision(imageOrUrl: ImageInput, prompt: string): Promise<{ text: string; usage: Usage }>;
 }

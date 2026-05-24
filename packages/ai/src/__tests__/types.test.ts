@@ -6,8 +6,8 @@ import type {
   Usage,
   SummaryFormat,
   ImageInput,
-  AiClient,
 } from '../types';
+import { AiClient } from '../types';
 
 describe('@things/ai public types', () => {
   it('Message accepts the three roles', () => {
@@ -70,36 +70,48 @@ describe('@things/ai public types', () => {
     expect('data' in data).toBe(true);
   });
 
-  it('AiClient is the shape used by consumers', () => {
-    // Type-level assertion: an object literal of the right shape should assign.
-    const _stub: AiClient = {
-      transcribe: async () => ({
-        text: '',
-        segments: [],
-        language: 'en',
-        usage: { kind: 'audio', seconds: 0 },
-      }),
-      chat: async () => ({
-        text: '',
-        usage: { kind: 'tokens', inputTokens: 0, outputTokens: 0 },
-      }),
-      chatStructured: async <T>() => ({
-        value: undefined as unknown as T,
-        usage: { kind: 'tokens', inputTokens: 0, outputTokens: 0 },
-      }),
-      summarize: async () => ({
-        summary: '',
-        usage: { kind: 'tokens', inputTokens: 0, outputTokens: 0 },
-      }),
-      embed: async () => ({
-        vectors: [],
-        usage: { kind: 'embedding', inputTokens: 0, vectorCount: 0 },
-      }),
-      vision: async () => ({
-        text: '',
-        usage: { kind: 'tokens', inputTokens: 0, outputTokens: 0 },
-      }),
-    };
-    expect(typeof _stub.chat).toBe('function');
+  it('AiClient is an abstract class subclassable by consumers', () => {
+    class StubAi extends AiClient {
+      async transcribe() {
+        return {
+          text: '',
+          segments: [],
+          language: 'en',
+          usage: { kind: 'audio' as const, seconds: 0 },
+        };
+      }
+      async chat() {
+        return {
+          text: '',
+          usage: { kind: 'tokens' as const, inputTokens: 0, outputTokens: 0 },
+        };
+      }
+      async chatStructured<T>() {
+        return {
+          value: undefined as unknown as T,
+          usage: { kind: 'tokens' as const, inputTokens: 0, outputTokens: 0 },
+        };
+      }
+      async summarize() {
+        return {
+          summary: '',
+          usage: { kind: 'tokens' as const, inputTokens: 0, outputTokens: 0 },
+        };
+      }
+      async embed() {
+        return {
+          vectors: [],
+          usage: { kind: 'embedding' as const, inputTokens: 0, vectorCount: 0 },
+        };
+      }
+      async vision() {
+        return {
+          text: '',
+          usage: { kind: 'tokens' as const, inputTokens: 0, outputTokens: 0 },
+        };
+      }
+    }
+    const stub: AiClient = new StubAi();
+    expect(typeof stub.chat).toBe('function');
   });
 });
