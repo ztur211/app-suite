@@ -1,5 +1,5 @@
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
-import Tasks from '../app/(app)/index';
+import Tasks from '../app/(app)/(tabs)/index';
 import { useAuth } from '../store/auth.store';
 import { useTasks } from '../store/tasks.store';
 import { tasksApi } from '../lib/api';

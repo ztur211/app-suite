@@ -6,7 +6,7 @@ export default function AppLayout() {
   if (!user) return <Redirect href="/login" />;
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
+      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="task/[id]" options={{ presentation: 'modal' }} />
     </Stack>
   );

@@ -5,9 +5,9 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Heading, Button, Card, TextInput, tokens } from '@things/design-system';
-import { useAuth } from '../../store/auth.store';
-import { useTasks } from '../../store/tasks.store';
-import type { Task } from '../../lib/types';
+import { useAuth } from '../../../store/auth.store';
+import { useTasks } from '../../../store/tasks.store';
+import type { Task } from '../../../lib/types';
 
 const newTaskSchema = z.object({
   title: z.string().trim().min(1, 'Enter a task'),
