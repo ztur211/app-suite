@@ -26,6 +26,7 @@ export {
 export { Heading, type HeadingProps, type HeadingLevel } from './primitives/Heading/Heading';
 export { Button, type ButtonProps, type ButtonVariant } from './primitives/Button/Button';
 export { Card, type CardProps } from './primitives/Card/Card';
+export { TextInput, type TextInputProps } from './primitives/TextInput/TextInput';
 
 // Animation hooks
 export { usePressFeedback } from './animation/usePressFeedback';
