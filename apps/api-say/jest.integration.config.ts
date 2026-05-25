@@ -1,12 +1,25 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  moduleFileExtensions: ['js', 'mjs', 'json', 'ts'],
   rootDir: 'src',
   testRegex: '.*\\.integration\\.spec\\.ts$',
+  transform: {
+    '^.+\\.(t|j|mj)s$': [
+      'ts-jest',
+      {
+        useESM: true,
+        tsconfig: '<rootDir>/../tsconfig.jest.json',
+      },
+    ],
+  },
+  extensionsToTreatAsEsm: ['.ts'],
+  testEnvironment: 'node',
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  transformIgnorePatterns: [
+    '/node_modules/(?!(better-auth|better-call|@better-fetch|@better-auth|@noble|jose|nanoid|rou3|uncrypto|defu|destr|hookable|ufo|ohash|radix3|h3|cookie-es|iron-webcrypto|klona)/).*',
+  ],
+  testTimeout: 60000,
 };
 
 export default config;

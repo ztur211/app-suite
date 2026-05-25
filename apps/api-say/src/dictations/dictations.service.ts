@@ -29,7 +29,7 @@ export interface CreateInput {
   audioBuffer: Buffer;
 }
 
-interface DictationRow {
+export interface DictationRow {
   id: string;
   userId: string;
   audioPath: string | null;
@@ -51,7 +51,7 @@ interface DictationRow {
   updatedAt: Date;
 }
 
-type DictationView = Omit<DictationRow, 'proposedPayload' | 'editedPayload' | 'usage'> & {
+export type DictationView = Omit<DictationRow, 'proposedPayload' | 'editedPayload' | 'usage'> & {
   proposedPayload: unknown;
   editedPayload: unknown | null;
   usage: unknown;
