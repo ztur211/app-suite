@@ -1,9 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../../prisma/generated/client';
 import { TasksService } from '../tasks.service';
 
 // Mock PrismaClient entirely
-jest.mock('@prisma/client', () => {
+jest.mock('../../../prisma/generated/client', () => {
   const mockPrisma = {
     task: {
       findMany: jest.fn(),

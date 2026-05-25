@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../prisma/generated/client';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 
