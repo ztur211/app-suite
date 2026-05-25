@@ -101,6 +101,23 @@ describe('DoSdk.tasks', () => {
     });
   });
 
+  it('forwards source field on create for cross-app provenance', async () => {
+    const { sdk, axiosMock } = makeSdk();
+    let receivedBody: { source?: { app: string; dictationId?: string } } | undefined;
+    axiosMock.onPost('/tasks').reply((config) => {
+      receivedBody = JSON.parse(config.data);
+      return [201, { id: 't1' }];
+    });
+    const result = await sdk.tasks.create({
+      userId: 'u1',
+      title: 'Email Jamie',
+      dueAt: null,
+      source: { app: 'say-things', dictationId: 'd1' },
+    });
+    expect(receivedBody?.source).toEqual({ app: 'say-things', dictationId: 'd1' });
+    expect(result.id).toBe('t1');
+  });
+
   it('uses the audience override when provided', async () => {
     const http = axios.create({ baseURL: 'http://api-do.test' });
     const axiosMock = new MockAdapter(http);

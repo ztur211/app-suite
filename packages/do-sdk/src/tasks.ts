@@ -1,6 +1,13 @@
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { signServiceToken } from '@things/auth';
 
+export interface TaskSource {
+  /** Originating app id (e.g. 'say-things'). */
+  app: string;
+  dictationId?: string;
+  [k: string]: unknown;
+}
+
 export interface CreateTaskParams {
   /** End-user the task is being created on behalf of. */
   userId: string;
@@ -8,6 +15,8 @@ export interface CreateTaskParams {
   /** ISO 8601 string, or null for no due date. */
   dueAt: string | null;
   notes?: string;
+  /** Cross-app provenance; api-do stores this verbatim for traceability. */
+  source?: TaskSource;
 }
 
 export interface CreateTaskResult {
@@ -39,6 +48,7 @@ export class TasksApi {
       dueAt: params.dueAt,
     };
     if (params.notes !== undefined) body['notes'] = params.notes;
+    if (params.source !== undefined) body['source'] = params.source;
     const { data } = await this.opts.http.post<CreateTaskResult>(
       '/tasks',
       body,
