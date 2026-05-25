@@ -107,14 +107,14 @@ describe('TasksService (unit)', () => {
     });
   });
 
-  describe('setCompleted', () => {
-    it('updates completed status when task belongs to user', async () => {
+  describe('update', () => {
+    it('updates completed status only when partial is { completed }', async () => {
       const existing = { id: 't1', userId: 'u1', title: 'Task', completed: false };
       const updated = { ...existing, completed: true };
       prisma.task.findUnique.mockResolvedValueOnce(existing);
       prisma.task.update.mockResolvedValueOnce(updated);
 
-      const result = await service.setCompleted('u1', 't1', true);
+      const result = await service.update('u1', 't1', { completed: true });
 
       expect(prisma.task.update).toHaveBeenCalledWith({
         where: { id: 't1' },
@@ -123,14 +123,103 @@ describe('TasksService (unit)', () => {
       expect(result).toBe(updated);
     });
 
+    it('updates title only when partial is { title }', async () => {
+      const existing = { id: 't1', userId: 'u1', title: 'Old', completed: false };
+      const updated = { ...existing, title: 'New' };
+      prisma.task.findUnique.mockResolvedValueOnce(existing);
+      prisma.task.update.mockResolvedValueOnce(updated);
+
+      const result = await service.update('u1', 't1', { title: 'New' });
+
+      expect(prisma.task.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { title: 'New' },
+      });
+      expect(result).toBe(updated);
+    });
+
+    it('sets dueAt to a Date when partial has dueAt as ISO string', async () => {
+      const existing = { id: 't1', userId: 'u1', title: 'Task', completed: false, dueAt: null };
+      const dueAt = '2026-06-01T00:00:00.000Z';
+      const updated = { ...existing, dueAt: new Date(dueAt) };
+      prisma.task.findUnique.mockResolvedValueOnce(existing);
+      prisma.task.update.mockResolvedValueOnce(updated);
+
+      const result = await service.update('u1', 't1', { dueAt });
+
+      expect(prisma.task.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { dueAt: new Date(dueAt) },
+      });
+      expect(result).toBe(updated);
+    });
+
+    it('clears dueAt to null when partial has dueAt: null', async () => {
+      const existing = {
+        id: 't1',
+        userId: 'u1',
+        title: 'Task',
+        completed: false,
+        dueAt: new Date(),
+      };
+      const updated = { ...existing, dueAt: null };
+      prisma.task.findUnique.mockResolvedValueOnce(existing);
+      prisma.task.update.mockResolvedValueOnce(updated);
+
+      const result = await service.update('u1', 't1', { dueAt: null });
+
+      expect(prisma.task.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { dueAt: null },
+      });
+      expect(result).toBe(updated);
+    });
+
+    it('updates multiple fields at once', async () => {
+      const existing = { id: 't1', userId: 'u1', title: 'Old', completed: false, dueAt: null };
+      const dueAt = '2026-07-01T00:00:00.000Z';
+      const updated = { ...existing, title: 'New', completed: true, dueAt: new Date(dueAt) };
+      prisma.task.findUnique.mockResolvedValueOnce(existing);
+      prisma.task.update.mockResolvedValueOnce(updated);
+
+      const result = await service.update('u1', 't1', {
+        title: 'New',
+        completed: true,
+        dueAt,
+      });
+
+      expect(prisma.task.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { title: 'New', completed: true, dueAt: new Date(dueAt) },
+      });
+      expect(result).toBe(updated);
+    });
+
+    it('ignores fields not in partial (does not pass undefined to Prisma)', async () => {
+      const existing = { id: 't1', userId: 'u1', title: 'X', completed: false };
+      prisma.task.findUnique.mockResolvedValueOnce(existing);
+      prisma.task.update.mockResolvedValueOnce(existing);
+
+      await service.update('u1', 't1', {});
+
+      expect(prisma.task.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: {},
+      });
+    });
+
     it('throws NotFoundException when task does not exist', async () => {
       prisma.task.findUnique.mockResolvedValueOnce(null);
-      await expect(service.setCompleted('u1', 'missing', true)).rejects.toThrow(NotFoundException);
+      await expect(service.update('u1', 'missing', { completed: true })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException when task belongs to a different user', async () => {
       prisma.task.findUnique.mockResolvedValueOnce({ id: 't1', userId: 'other-user' });
-      await expect(service.setCompleted('u1', 't1', true)).rejects.toThrow(NotFoundException);
+      await expect(service.update('u1', 't1', { completed: true })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

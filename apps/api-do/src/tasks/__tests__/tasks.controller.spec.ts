@@ -5,7 +5,7 @@ import { TasksService } from '../tasks.service';
 const mockTasksService = {
   list: jest.fn(),
   create: jest.fn(),
-  setCompleted: jest.fn(),
+  update: jest.fn(),
   remove: jest.fn(),
 };
 
@@ -75,13 +75,36 @@ describe('TasksController (unit)', () => {
     expect(result).toBe(task);
   });
 
-  it('PATCH /tasks/:id calls service.setCompleted', async () => {
+  it('PATCH /tasks/:id calls service.update with completed only', async () => {
     const updated = { id: 't1', completed: true };
-    mockTasksService.setCompleted.mockResolvedValueOnce(updated);
+    mockTasksService.update.mockResolvedValueOnce(updated);
 
     const result = await controller.patch(makeRequest('u1'), 't1', { completed: true });
-    expect(mockTasksService.setCompleted).toHaveBeenCalledWith('u1', 't1', true);
+    expect(mockTasksService.update).toHaveBeenCalledWith('u1', 't1', { completed: true });
     expect(result).toBe(updated);
+  });
+
+  it('PATCH /tasks/:id forwards title + dueAt updates', async () => {
+    const updated = { id: 't1', title: 'New title', dueAt: new Date('2026-06-01') };
+    mockTasksService.update.mockResolvedValueOnce(updated);
+
+    const result = await controller.patch(makeRequest('u1'), 't1', {
+      title: 'New title',
+      dueAt: '2026-06-01T00:00:00.000Z',
+    });
+    expect(mockTasksService.update).toHaveBeenCalledWith('u1', 't1', {
+      title: 'New title',
+      dueAt: '2026-06-01T00:00:00.000Z',
+    });
+    expect(result).toBe(updated);
+  });
+
+  it('PATCH /tasks/:id accepts dueAt: null to clear due date', async () => {
+    const updated = { id: 't1', dueAt: null };
+    mockTasksService.update.mockResolvedValueOnce(updated);
+
+    await controller.patch(makeRequest('u1'), 't1', { dueAt: null });
+    expect(mockTasksService.update).toHaveBeenCalledWith('u1', 't1', { dueAt: null });
   });
 
   it('DELETE /tasks/:id calls service.remove', async () => {

@@ -1,6 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '../../prisma/generated/client';
 
+export interface UpdateTaskData {
+  title?: string;
+  /** ISO 8601 string to set, or null to clear. Omit to leave unchanged. */
+  dueAt?: string | null;
+  completed?: boolean;
+}
+
 @Injectable()
 export class TasksService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -27,10 +34,16 @@ export class TasksService {
     });
   }
 
-  async setCompleted(userId: string, id: string, completed: boolean) {
+  async update(userId: string, id: string, data: UpdateTaskData) {
     const existing = await this.prisma.task.findUnique({ where: { id } });
     if (!existing || existing.userId !== userId) throw new NotFoundException();
-    return this.prisma.task.update({ where: { id }, data: { completed } });
+
+    const updateData: { title?: string; dueAt?: Date | null; completed?: boolean } = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.dueAt !== undefined) updateData.dueAt = data.dueAt ? new Date(data.dueAt) : null;
+    if (data.completed !== undefined) updateData.completed = data.completed;
+
+    return this.prisma.task.update({ where: { id }, data: updateData });
   }
 
   async remove(userId: string, id: string) {

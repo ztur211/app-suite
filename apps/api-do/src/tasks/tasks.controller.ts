@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } fro
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session.guard';
 import { SessionOrServiceJwtGuard } from '../auth/session-or-service-jwt.guard';
-import { TasksService } from './tasks.service';
+import { TasksService, type UpdateTaskData } from './tasks.service';
 
 @Controller('tasks')
 export class TasksController {
@@ -34,9 +34,9 @@ export class TasksController {
   patch(
     @Req() req: Request & { userId: string },
     @Param('id') id: string,
-    @Body() body: { completed: boolean },
+    @Body() body: UpdateTaskData,
   ) {
-    return this.tasks.setCompleted(req.userId, id, body.completed);
+    return this.tasks.update(req.userId, id, body);
   }
 
   @Delete(':id')
