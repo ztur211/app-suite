@@ -16,7 +16,13 @@ export class TasksController {
   @Post()
   create(
     @Req() req: Request & { userId: string },
-    @Body() body: { title: string; dueAt?: string },
+    @Body()
+    body: {
+      title: string;
+      dueAt?: string;
+      /** Cross-app provenance (e.g. { app: 'say-things', dictationId: '…' }). */
+      source?: { app: string; dictationId?: string; [k: string]: unknown };
+    },
   ) {
     return this.tasks.create(req.userId, body);
   }

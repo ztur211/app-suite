@@ -57,7 +57,7 @@ describe('TasksService (unit)', () => {
       const result = await service.create('u1', { title: 'Buy milk' });
 
       expect(prisma.task.create).toHaveBeenCalledWith({
-        data: { userId: 'u1', title: 'Buy milk', dueAt: null },
+        data: { userId: 'u1', title: 'Buy milk', dueAt: null, source: null },
       });
       expect(result).toBe(created);
     });
@@ -76,7 +76,32 @@ describe('TasksService (unit)', () => {
       const result = await service.create('u1', { title: 'Doctor', dueAt });
 
       expect(prisma.task.create).toHaveBeenCalledWith({
-        data: { userId: 'u1', title: 'Doctor', dueAt: new Date(dueAt) },
+        data: { userId: 'u1', title: 'Doctor', dueAt: new Date(dueAt), source: null },
+      });
+      expect(result).toBe(created);
+    });
+
+    it('persists the source field as JSON when provided (cross-app provenance)', async () => {
+      const source = { app: 'say-things', dictationId: 'd1' };
+      const created = {
+        id: 'new3',
+        title: 'Email Jamie',
+        userId: 'u1',
+        completed: false,
+        dueAt: null,
+        source: JSON.stringify(source),
+      };
+      prisma.task.create.mockResolvedValueOnce(created);
+
+      const result = await service.create('u1', { title: 'Email Jamie', source });
+
+      expect(prisma.task.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'u1',
+          title: 'Email Jamie',
+          dueAt: null,
+          source: JSON.stringify(source),
+        },
       });
       expect(result).toBe(created);
     });

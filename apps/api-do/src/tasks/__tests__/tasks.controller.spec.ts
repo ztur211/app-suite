@@ -60,6 +60,21 @@ describe('TasksController (unit)', () => {
     expect(result).toBe(task);
   });
 
+  it('POST /tasks forwards the source field when present', async () => {
+    const task = { id: 't1' };
+    mockTasksService.create.mockResolvedValueOnce(task);
+
+    const result = await controller.create(makeRequest('u1'), {
+      title: 'Email Jamie',
+      source: { app: 'say-things', dictationId: 'd1' },
+    });
+    expect(mockTasksService.create).toHaveBeenCalledWith('u1', {
+      title: 'Email Jamie',
+      source: { app: 'say-things', dictationId: 'd1' },
+    });
+    expect(result).toBe(task);
+  });
+
   it('PATCH /tasks/:id calls service.setCompleted', async () => {
     const updated = { id: 't1', completed: true };
     mockTasksService.setCompleted.mockResolvedValueOnce(updated);

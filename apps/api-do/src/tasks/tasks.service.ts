@@ -9,9 +9,21 @@ export class TasksService {
     return this.prisma.task.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
   }
 
-  async create(userId: string, data: { title: string; dueAt?: string }) {
+  async create(
+    userId: string,
+    data: {
+      title: string;
+      dueAt?: string;
+      source?: { app: string; dictationId?: string; [k: string]: unknown };
+    },
+  ) {
     return this.prisma.task.create({
-      data: { userId, title: data.title, dueAt: data.dueAt ? new Date(data.dueAt) : null },
+      data: {
+        userId,
+        title: data.title,
+        dueAt: data.dueAt ? new Date(data.dueAt) : null,
+        source: data.source ? JSON.stringify(data.source) : null,
+      },
     });
   }
 
