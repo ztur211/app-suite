@@ -1,19 +1,21 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session.guard';
+import { SessionOrServiceJwtGuard } from '../auth/session-or-service-jwt.guard';
 import { TasksService } from './tasks.service';
 
 @Controller('tasks')
-@UseGuards(SessionGuard)
 export class TasksController {
   constructor(private readonly tasks: TasksService) {}
 
   @Get()
+  @UseGuards(SessionGuard)
   list(@Req() req: Request & { userId: string }) {
     return this.tasks.list(req.userId);
   }
 
   @Post()
+  @UseGuards(SessionOrServiceJwtGuard)
   create(
     @Req() req: Request & { userId: string },
     @Body()
@@ -28,6 +30,7 @@ export class TasksController {
   }
 
   @Patch(':id')
+  @UseGuards(SessionGuard)
   patch(
     @Req() req: Request & { userId: string },
     @Param('id') id: string,
@@ -37,6 +40,7 @@ export class TasksController {
   }
 
   @Delete(':id')
+  @UseGuards(SessionGuard)
   remove(@Req() req: Request & { userId: string }, @Param('id') id: string) {
     return this.tasks.remove(req.userId, id);
   }
