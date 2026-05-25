@@ -1,11 +1,18 @@
-import { PACKAGE_NAME } from '../index';
+import { SaySdk } from '../index';
 
-describe('@things/say-sdk', () => {
-  it('exports PACKAGE_NAME as a string identifying the package', () => {
-    expect(PACKAGE_NAME).toBe('@things/say-sdk');
+describe('@things/say-sdk public surface', () => {
+  it('exports the SaySdk class', () => {
+    expect(typeof SaySdk).toBe('function');
   });
 
-  it('exports a frozen object so identifiers cannot be reassigned at runtime', () => {
-    expect(typeof PACKAGE_NAME).toBe('string');
+  it('constructs an instance with a pending API attached', () => {
+    const sdk = new SaySdk({
+      baseUrl: 'http://example.test',
+      callerService: 'api-buy',
+      serviceTokenSecret: 'x'.repeat(32),
+    });
+    expect(sdk.pending).toBeDefined();
+    expect(typeof sdk.pending.list).toBe('function');
+    expect(typeof sdk.pending.consume).toBe('function');
   });
 });
