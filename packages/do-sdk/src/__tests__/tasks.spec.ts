@@ -75,6 +75,91 @@ describe('DoSdk.tasks', () => {
     });
   });
 
+  describe('update', () => {
+    it('PATCHes /tasks/:id with title only and returns the updated task', async () => {
+      const { sdk, axiosMock } = makeSdk();
+      let receivedBody: Record<string, unknown> | undefined;
+      axiosMock.onPatch('/tasks/t1').reply((config) => {
+        receivedBody = JSON.parse(config.data);
+        return [
+          200,
+          {
+            id: 't1',
+            userId: 'u1',
+            title: 'Renamed',
+            completed: false,
+            dueAt: null,
+          },
+        ];
+      });
+      const result = await sdk.tasks.update({ userId: 'u1', taskId: 't1', title: 'Renamed' });
+      expect(receivedBody).toEqual({ title: 'Renamed' });
+      expect(result.title).toBe('Renamed');
+    });
+
+    it('PATCHes with dueAt set and dueAt cleared', async () => {
+      const { sdk, axiosMock } = makeSdk();
+      const bodies: Record<string, unknown>[] = [];
+      axiosMock.onPatch('/tasks/t1').reply((config) => {
+        bodies.push(JSON.parse(config.data));
+        return [200, { id: 't1', userId: 'u1', title: 'X', completed: false, dueAt: null }];
+      });
+      await sdk.tasks.update({
+        userId: 'u1',
+        taskId: 't1',
+        dueAt: '2026-06-01T00:00:00.000Z',
+      });
+      await sdk.tasks.update({ userId: 'u1', taskId: 't1', dueAt: null });
+      expect(bodies[0]).toEqual({ dueAt: '2026-06-01T00:00:00.000Z' });
+      expect(bodies[1]).toEqual({ dueAt: null });
+    });
+
+    it('PATCHes with completed flag', async () => {
+      const { sdk, axiosMock } = makeSdk();
+      let receivedBody: Record<string, unknown> | undefined;
+      axiosMock.onPatch('/tasks/t1').reply((config) => {
+        receivedBody = JSON.parse(config.data);
+        return [200, { id: 't1', userId: 'u1', title: 'X', completed: true, dueAt: null }];
+      });
+      await sdk.tasks.update({ userId: 'u1', taskId: 't1', completed: true });
+      expect(receivedBody).toEqual({ completed: true });
+    });
+
+    it('sends a service JWT in the Authorization header', async () => {
+      const { sdk, axiosMock } = makeSdk();
+      let capturedHeader: string | undefined;
+      axiosMock.onPatch('/tasks/t1').reply((config) => {
+        capturedHeader = config.headers?.['Authorization'] as string | undefined;
+        return [200, { id: 't1' }];
+      });
+      await sdk.tasks.update({ userId: 'u_42', taskId: 't1', completed: true });
+      expect(capturedHeader).toMatch(/^Bearer /);
+      const payload = verifyServiceToken((capturedHeader ?? '').slice('Bearer '.length), {
+        secret: SECRET,
+        expectedAud: 'api-do',
+      });
+      expect(payload.iss).toBe('api-say');
+      expect(payload.sub).toBe('u_42');
+    });
+
+    it('omits undefined fields from the body', async () => {
+      const { sdk, axiosMock } = makeSdk();
+      let receivedBody: Record<string, unknown> | undefined;
+      axiosMock.onPatch('/tasks/t1').reply((config) => {
+        receivedBody = JSON.parse(config.data);
+        return [200, { id: 't1' }];
+      });
+      await sdk.tasks.update({
+        userId: 'u1',
+        taskId: 't1',
+        title: 'New',
+        completed: true,
+      });
+      expect(receivedBody).toEqual({ title: 'New', completed: true });
+      expect(receivedBody).not.toHaveProperty('dueAt');
+    });
+  });
+
   describe('delete', () => {
     it('DELETEs /tasks/:id and returns { ok: true }', async () => {
       const { sdk, axiosMock } = makeSdk();

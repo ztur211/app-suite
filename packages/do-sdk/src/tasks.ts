@@ -27,6 +27,25 @@ export interface CreateTaskResult {
   dueAt: string | null;
 }
 
+export interface UpdateTaskParams {
+  userId: string;
+  taskId: string;
+  /** New title. Omit to leave unchanged. */
+  title?: string;
+  /** ISO 8601 string to set, null to clear, undefined to leave unchanged. */
+  dueAt?: string | null;
+  /** New completed flag. Omit to leave unchanged. */
+  completed?: boolean;
+}
+
+export interface UpdateTaskResult {
+  id: string;
+  userId: string;
+  title: string;
+  completed: boolean;
+  dueAt: string | null;
+}
+
 export interface DeleteTaskParams {
   userId: string;
   taskId: string;
@@ -51,6 +70,19 @@ export class TasksApi {
     if (params.source !== undefined) body['source'] = params.source;
     const { data } = await this.opts.http.post<CreateTaskResult>(
       '/tasks',
+      body,
+      this.authHeaders(params.userId),
+    );
+    return data;
+  }
+
+  async update(params: UpdateTaskParams): Promise<UpdateTaskResult> {
+    const body: Record<string, unknown> = {};
+    if (params.title !== undefined) body['title'] = params.title;
+    if (params.dueAt !== undefined) body['dueAt'] = params.dueAt;
+    if (params.completed !== undefined) body['completed'] = params.completed;
+    const { data } = await this.opts.http.patch<UpdateTaskResult>(
+      `/tasks/${encodeURIComponent(params.taskId)}`,
       body,
       this.authHeaders(params.userId),
     );

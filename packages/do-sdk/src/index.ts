@@ -31,6 +31,8 @@ export class DoSdk {
 export type {
   CreateTaskParams,
   CreateTaskResult,
+  UpdateTaskParams,
+  UpdateTaskResult,
   DeleteTaskParams,
   TaskSource,
   TasksApi,
