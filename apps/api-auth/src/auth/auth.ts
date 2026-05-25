@@ -16,6 +16,15 @@ export const auth = betterAuth({
     process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3001',
     'http://localhost:8081',
   ],
+  user: {
+    additionalFields: {
+      timezone: {
+        type: 'string',
+        defaultValue: 'UTC',
+        required: false,
+      },
+    },
+  },
 });
 
 export type Auth = typeof auth;

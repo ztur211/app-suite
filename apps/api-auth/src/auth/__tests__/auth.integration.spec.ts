@@ -79,4 +79,27 @@ describe('Better Auth endpoints (integration)', () => {
     const res = await request(app.getHttpServer()).get('/health').expect(200);
     expect(res.body).toEqual({ status: 'ok', service: 'api-auth' });
   });
+
+  it('persists timezone on signup', async () => {
+    const tzEmail = `tz-integration-${Date.now()}@things-test.local`;
+    try {
+      await request(app.getHttpServer())
+        .post('/auth/sign-up/email')
+        .send({
+          email: tzEmail,
+          password: TEST_PASSWORD,
+          name: 'TZ User',
+          timezone: 'Pacific/Auckland',
+        })
+        .expect((r) => {
+          if (r.status !== 200) {
+            throw new Error(`Expected 200 but got ${r.status}: ${JSON.stringify(r.body)}`);
+          }
+        });
+      const user = await prisma.user.findUnique({ where: { email: tzEmail } });
+      expect((user as { timezone?: string } | null)?.timezone).toBe('Pacific/Auckland');
+    } finally {
+      await prisma.user.deleteMany({ where: { email: tzEmail } });
+    }
+  });
 });
