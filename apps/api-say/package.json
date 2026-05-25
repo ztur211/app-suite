@@ -11,7 +11,7 @@
     "test": "npm run test:unit",
     "test:unit": "jest --config jest.unit.config.ts",
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --passWithNoTests",
-    "test:e2e": "jest --config jest.e2e.config.ts --passWithNoTests",
+    "test:e2e": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.e2e.config.ts --passWithNoTests",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:generate": "prisma generate",
     "db:push": "prisma db push --skip-generate",
