@@ -62,6 +62,12 @@ describe('Today screen', () => {
     });
   });
 
+  it('shows an empty state when no tasks', async () => {
+    const { findByTestId, findByText } = render(<Today />);
+    expect(await findByTestId('empty-state')).toBeTruthy();
+    expect(await findByText('Nothing to do')).toBeTruthy();
+  });
+
   it('shows a task returned by tasksApi.list', async () => {
     mockTasksApi.list.mockResolvedValueOnce([makeTask({ title: 'Buy groceries' })]);
 
@@ -86,6 +92,20 @@ describe('Today screen', () => {
 
     expect(mockTasksApi.create).toHaveBeenCalledWith('New task');
     expect(await findByText('New task')).toBeTruthy();
+  });
+
+  it('does not create a task when title is blank', async () => {
+    const { getByTestId } = render(<Today />);
+    await waitFor(() => {
+      expect(getByTestId('task-input')).toBeTruthy();
+    });
+
+    fireEvent.changeText(getByTestId('task-input'), '   ');
+    await act(async () => {
+      fireEvent.press(getByTestId('task-add-btn'));
+    });
+
+    expect(mockTasksApi.create).not.toHaveBeenCalled();
   });
 
   it('toggles a task on card press', async () => {
@@ -120,6 +140,15 @@ describe('Today screen', () => {
     await waitFor(() => {
       expect(queryByText('Delete me')).toBeNull();
     });
+  });
+
+  it('shows a list error when tasksApi.list throws', async () => {
+    mockTasksApi.list.mockRejectedValueOnce(new Error('Network down'));
+
+    const { findByTestId, findByText } = render(<Today />);
+
+    expect(await findByTestId('list-error')).toBeTruthy();
+    expect(await findByText('Network down')).toBeTruthy();
   });
 
   it('calls signOut when sign out is pressed', async () => {

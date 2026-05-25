@@ -52,12 +52,12 @@ describe('Login screen', () => {
     const { getByTestId } = render(<Login />);
 
     fireEvent.changeText(getByTestId('login-email'), 'test@example.com');
-    fireEvent.changeText(getByTestId('login-password'), 'pass123');
+    fireEvent.changeText(getByTestId('login-password'), 'password123');
     await act(async () => {
       fireEvent.press(getByTestId('login-submit'));
     });
 
-    expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'pass123');
+    expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123');
   });
 
   it('calls signUp in signup mode', async () => {
@@ -67,12 +67,12 @@ describe('Login screen', () => {
     // Toggle to signup
     fireEvent.press(getByText("Don't have an account? Sign up"));
     fireEvent.changeText(getByTestId('login-email'), 'new@example.com');
-    fireEvent.changeText(getByTestId('login-password'), 'secret');
+    fireEvent.changeText(getByTestId('login-password'), 'secret123');
     await act(async () => {
       fireEvent.press(getByTestId('login-submit'));
     });
 
-    expect(mockSignUp).toHaveBeenCalledWith('new@example.com', 'secret');
+    expect(mockSignUp).toHaveBeenCalledWith('new@example.com', 'secret123');
   });
 
   it('shows error message on sign in failure', async () => {
@@ -80,7 +80,7 @@ describe('Login screen', () => {
     const { getByTestId, findByText } = render(<Login />);
 
     fireEvent.changeText(getByTestId('login-email'), 'bad@example.com');
-    fireEvent.changeText(getByTestId('login-password'), 'wrong');
+    fireEvent.changeText(getByTestId('login-password'), 'wrongpass1');
     await act(async () => {
       fireEvent.press(getByTestId('login-submit'));
     });
@@ -88,5 +88,31 @@ describe('Login screen', () => {
     await waitFor(async () => {
       expect(await findByText('Invalid credentials')).toBeTruthy();
     });
+  });
+
+  it('shows inline error and does not submit when email is invalid', async () => {
+    const { getByTestId, findByText } = render(<Login />);
+
+    fireEvent.changeText(getByTestId('login-email'), 'not-an-email');
+    fireEvent.changeText(getByTestId('login-password'), 'password123');
+    await act(async () => {
+      fireEvent.press(getByTestId('login-submit'));
+    });
+
+    expect(await findByText('Enter a valid email')).toBeTruthy();
+    expect(mockSignIn).not.toHaveBeenCalled();
+  });
+
+  it('shows inline error and does not submit when password is too short', async () => {
+    const { getByTestId, findByText } = render(<Login />);
+
+    fireEvent.changeText(getByTestId('login-email'), 'ok@example.com');
+    fireEvent.changeText(getByTestId('login-password'), 'short');
+    await act(async () => {
+      fireEvent.press(getByTestId('login-submit'));
+    });
+
+    expect(await findByText('Password must be at least 8 characters')).toBeTruthy();
+    expect(mockSignIn).not.toHaveBeenCalled();
   });
 });
