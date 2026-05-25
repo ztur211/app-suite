@@ -40,7 +40,7 @@ export class TasksController {
   }
 
   @Delete(':id')
-  @UseGuards(SessionGuard)
+  @UseGuards(SessionOrServiceJwtGuard)
   remove(@Req() req: Request & { userId: string }, @Param('id') id: string) {
     return this.tasks.remove(req.userId, id);
   }
