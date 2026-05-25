@@ -15,7 +15,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:generate": "prisma generate",
     "db:push": "prisma db push --skip-generate",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "eval:intent": "ts-node __tests__/eval/intent-classification/run-eval.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

@@ -1,0 +1,50 @@
+{"transcript":"remind me to email Jamie about Q3 by Thursday","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.85}
+{"transcript":"don't forget to call mum tomorrow at 5pm","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.85}
+{"transcript":"I need to renew my passport before the end of the month","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.8}
+{"transcript":"add a task to follow up with the landlord","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.85}
+{"transcript":"remind me to take the bins out tonight","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.85}
+{"transcript":"book the dentist in two weeks","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.8}
+{"transcript":"remind me to pay the power bill on the 23rd","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.85}
+{"transcript":"call the plumber friday morning","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.75}
+{"transcript":"make a note that the door code is 4471","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.85}
+{"transcript":"for the record the meeting was moved to room 3B","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.8}
+{"transcript":"random thought, what if we open-sourced the SDK","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.75}
+{"transcript":"remember that the wifi password is lemoncake42","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.85}
+{"transcript":"note to self: try the Friday lunch special at the Greek place","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.7}
+{"transcript":"the book I was reading is called Project Hail Mary","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.6}
+{"transcript":"reminder, library closes at 6 on saturday","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.6}
+{"transcript":"keep in mind that the kitchen tap needs a new washer","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.7}
+{"transcript":"draft an email to Sarah saying I will be late","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"SEND","minConfidence":0.85}
+{"transcript":"reply to the team about the launch date","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"SEND","minConfidence":0.75}
+{"transcript":"send Alex a message to confirm dinner thursday","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"SEND","minConfidence":0.85}
+{"transcript":"email accounts that the invoice number is wrong","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"SEND","minConfidence":0.85}
+{"transcript":"slack the design channel about the new icon set","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"SEND","minConfidence":0.75}
+{"transcript":"message dad happy birthday for tomorrow","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"SEND","minConfidence":0.85}
+{"transcript":"compose a polite decline to the conference invite","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"SEND","minConfidence":0.75}
+{"transcript":"pick up oat milk and lightbulbs","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"BUY","minConfidence":0.75}
+{"transcript":"add to shopping list bin liners three pack","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"BUY","minConfidence":0.85}
+{"transcript":"I need to buy a charger cable for the new laptop","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"BUY","minConfidence":0.85}
+{"transcript":"order more printer paper a4","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"BUY","minConfidence":0.8}
+{"transcript":"grab some flowers for mums birthday","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"BUY","minConfidence":0.75}
+{"transcript":"pickup list: courgettes, capsicum, halloumi","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"BUY","minConfidence":0.8}
+{"transcript":"need to get a birthday card for the boss","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"BUY","minConfidence":0.75}
+{"transcript":"add new toothbrush heads to the next shop","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"BUY","minConfidence":0.8}
+{"transcript":"want to try making sourdough this weekend","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"EAT","minConfidence":0.75}
+{"transcript":"go to that ramen place on Cuba street next Friday","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"EAT","minConfidence":0.75}
+{"transcript":"craving paella for dinner tonight","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"EAT","minConfidence":0.75}
+{"transcript":"cook a roast lamb on sunday","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"EAT","minConfidence":0.8}
+{"transcript":"try the new vietnamese spot in Newtown","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"EAT","minConfidence":0.75}
+{"transcript":"make a thai green curry from scratch","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"EAT","minConfidence":0.8}
+{"transcript":"check out that vegan dessert place","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"EAT","minConfidence":0.7}
+{"transcript":"umm","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.0}
+{"transcript":"uhh wait I mean","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.0}
+{"transcript":"oh actually nevermind","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.0}
+{"transcript":"foo bar baz","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.0}
+{"transcript":"call mum","userTz":"Pacific/Auckland","captureMode":"drive","expectedIntent":"DO","minConfidence":0.6}
+{"transcript":"emily wants pizza on saturday","userTz":"Pacific/Auckland","captureMode":"drive","expectedIntent":"NOTE","minConfidence":0.5}
+{"transcript":"buy bread on the way home","userTz":"Pacific/Auckland","captureMode":"drive","expectedIntent":"BUY","minConfidence":0.65}
+{"transcript":"text the kids to be ready at 6","userTz":"Pacific/Auckland","captureMode":"drive","expectedIntent":"SEND","minConfidence":0.65}
+{"transcript":"want kebabs tonight","userTz":"Pacific/Auckland","captureMode":"drive","expectedIntent":"EAT","minConfidence":0.6}
+{"transcript":"remind me in two hours to take the cake out of the oven","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.85}
+{"transcript":"book yoga for next tuesday at 7","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"DO","minConfidence":0.8}
+{"transcript":"on Friday at 3 we have the all hands","userTz":"Pacific/Auckland","captureMode":"tap","expectedIntent":"NOTE","minConfidence":0.5}
