@@ -1,11 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Heading, Button, Card, TextInput, tokens } from '@things/design-system';
 import { useAuth } from '../../store/auth.store';
-import { tasksApi } from '../../lib/api';
+import { useTasks } from '../../store/tasks.store';
 import type { Task } from '../../lib/types';
 
 const newTaskSchema = z.object({
@@ -14,53 +15,55 @@ const newTaskSchema = z.object({
 
 type NewTaskForm = z.infer<typeof newTaskSchema>;
 
-export default function Today() {
+type Filter = 'today' | 'upcoming' | 'done';
+
+function filterTasks(tasks: Task[], filter: Filter): Task[] {
+  if (filter === 'done') return tasks.filter((t) => t.completed);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return tasks.filter((t) => {
+    if (t.completed) return false;
+    if (!t.dueAt) return filter === 'today';
+    const dueAt = new Date(t.dueAt);
+    if (filter === 'today') return dueAt <= endOfToday;
+    return dueAt > endOfToday;
+  });
+}
+
+const filterLabels: Record<Filter, string> = {
+  today: 'Today',
+  upcoming: 'Upcoming',
+  done: 'Done',
+};
+
+export default function Tasks() {
+  const router = useRouter();
   const { signOut, user } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const { tasks, loading, error, refresh, create, update, remove } = useTasks();
+  const [filter, setFilter] = useState<Filter>('today');
 
   const { control, handleSubmit, reset } = useForm<NewTaskForm>({
     resolver: zodResolver(newTaskSchema),
     defaultValues: { title: '' },
   });
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setListError(null);
-    try {
-      setTasks(await tasksApi.list());
-    } catch (e) {
-      setListError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     refresh();
   }, [refresh]);
 
+  const visible = useMemo(() => filterTasks(tasks, filter), [tasks, filter]);
+
   const add = handleSubmit(async ({ title }) => {
-    const t = await tasksApi.create(title);
-    setTasks((prev) => [t, ...prev]);
+    await create(title);
     reset({ title: '' });
   });
 
-  const toggle = async (t: Task) => {
-    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, completed: !x.completed } : x)));
-    await tasksApi.setCompleted(t.id, !t.completed);
-  };
-
-  const remove = async (t: Task) => {
-    setTasks((prev) => prev.filter((x) => x.id !== t.id));
-    await tasksApi.remove(t.id);
-  };
+  const toggle = (t: Task) => update(t.id, { completed: !t.completed });
 
   return (
     <View style={{ flex: 1, padding: tokens.space[6], gap: tokens.space[4] }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Heading level={1}>Today</Heading>
+        <Heading level={1}>Tasks</Heading>
         <Pressable onPress={signOut} testID="sign-out">
           <Heading level={4}>Sign out</Heading>
         </Pressable>
@@ -89,26 +92,53 @@ export default function Today() {
         </View>
       </Card>
 
-      {listError ? (
+      <View
+        style={{ flexDirection: 'row', gap: tokens.space[2] }}
+        accessibilityRole="tablist"
+        testID="filter-tabs"
+      >
+        {(Object.keys(filterLabels) as Filter[]).map((key) => (
+          <Pressable
+            key={key}
+            onPress={() => setFilter(key)}
+            testID={`tab-${key}`}
+            style={{
+              paddingVertical: tokens.space[2],
+              paddingHorizontal: tokens.space[4],
+              borderRadius: tokens.radius.full,
+              backgroundColor:
+                filter === key ? tokens.colors.apps.do : tokens.colors.surface.sunken,
+            }}
+          >
+            <Heading level={4}>{filterLabels[key]}</Heading>
+          </Pressable>
+        ))}
+      </View>
+
+      {error ? (
         <Card testID="list-error">
-          <Heading level={4}>{listError}</Heading>
+          <Heading level={4}>{error}</Heading>
         </Card>
       ) : null}
 
       {loading ? (
         <ActivityIndicator color={tokens.colors.apps.do} testID="list-loading" />
-      ) : tasks.length === 0 && !listError ? (
+      ) : visible.length === 0 && !error ? (
         <View testID="empty-state" style={{ padding: tokens.space[6], alignItems: 'center' }}>
-          <Heading level={3}>Nothing to do</Heading>
-          <Heading level={4}>Add your first task above</Heading>
+          <Heading level={3}>{emptyTitle(filter)}</Heading>
+          <Heading level={4}>{emptySubtitle(filter)}</Heading>
         </View>
       ) : (
         <FlatList
-          data={tasks}
+          data={visible}
           keyExtractor={(t) => t.id}
           ItemSeparatorComponent={() => <View style={{ height: tokens.space[2] }} />}
           renderItem={({ item }) => (
-            <Card pressable onPress={() => toggle(item)} testID={`task-card-${item.id}`}>
+            <Card
+              pressable
+              onPress={() => router.push(`/task/${item.id}`)}
+              testID={`task-card-${item.id}`}
+            >
               <View
                 style={{
                   flexDirection: 'row',
@@ -124,20 +154,26 @@ export default function Today() {
                     flex: 1,
                   }}
                 >
-                  <View
-                    style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: 6,
-                      borderWidth: 2,
-                      borderColor: item.completed ? tokens.colors.apps.do : tokens.colors.ink[300],
-                      backgroundColor: item.completed ? tokens.colors.apps.do : 'transparent',
-                    }}
-                    testID={`checkbox-${item.id}`}
-                  />
-                  <Heading level={4}>{item.title}</Heading>
+                  <Pressable onPress={() => toggle(item)} testID={`checkbox-${item.id}`}>
+                    <View
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 6,
+                        borderWidth: 2,
+                        borderColor: item.completed
+                          ? tokens.colors.apps.do
+                          : tokens.colors.ink[300],
+                        backgroundColor: item.completed ? tokens.colors.apps.do : 'transparent',
+                      }}
+                    />
+                  </Pressable>
+                  <View style={{ flex: 1 }}>
+                    <Heading level={4}>{item.title}</Heading>
+                    {item.dueAt ? <Heading level={4}>{formatDueAt(item.dueAt)}</Heading> : null}
+                  </View>
                 </View>
-                <Pressable onPress={() => remove(item)} testID={`delete-${item.id}`}>
+                <Pressable onPress={() => remove(item.id)} testID={`delete-${item.id}`}>
                   <Heading level={4}>×</Heading>
                 </Pressable>
               </View>
@@ -147,4 +183,21 @@ export default function Today() {
       )}
     </View>
   );
+}
+
+function emptyTitle(filter: Filter): string {
+  if (filter === 'done') return 'Nothing finished yet';
+  if (filter === 'upcoming') return 'Nothing on the horizon';
+  return 'Nothing to do';
+}
+
+function emptySubtitle(filter: Filter): string {
+  if (filter === 'done') return 'Completed tasks will show up here';
+  if (filter === 'upcoming') return 'Schedule a task with a future due date';
+  return 'Add your first task above';
+}
+
+function formatDueAt(iso: string): string {
+  const d = new Date(iso);
+  return `Due ${d.toLocaleDateString()}`;
 }

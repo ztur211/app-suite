@@ -43,6 +43,13 @@ export const authApi = {
     ),
 };
 
+export interface TaskUpdate {
+  title?: string;
+  /** ISO 8601 string to set, null to clear, undefined to leave unchanged. */
+  dueAt?: string | null;
+  completed?: boolean;
+}
+
 export const tasksApi = {
   list: () => request<Task[]>(`${DO_URL}/tasks`),
   create: (title: string, dueAt?: string) =>
@@ -50,10 +57,10 @@ export const tasksApi = {
       method: 'POST',
       body: JSON.stringify({ title, dueAt }),
     }),
-  setCompleted: (id: string, completed: boolean) =>
+  update: (id: string, partial: TaskUpdate) =>
     request<Task>(`${DO_URL}/tasks/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ completed }),
+      body: JSON.stringify(partial),
     }),
   remove: (id: string) => request<{ ok: boolean }>(`${DO_URL}/tasks/${id}`, { method: 'DELETE' }),
 };
