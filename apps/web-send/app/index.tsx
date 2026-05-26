@@ -1,9 +1,5 @@
-import { Text, View } from 'react-native';
+import { Redirect } from 'expo-router';
 
-export default function Index() {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text accessibilityRole="header">Send Things</Text>
-    </View>
-  );
+export default function Root() {
+  return <Redirect href="/(app)" />;
 }

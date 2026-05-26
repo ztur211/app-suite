@@ -1,2 +1,3 @@
-// Suppresses noisy React Native warnings in test output that aren't actionable for unit tests.
-// Add jest.mock() calls here for libraries that misbehave under jsdom/jest-expo if they appear later.
+// Mock react-native-reanimated — design-system Button uses it.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
