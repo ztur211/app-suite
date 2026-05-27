@@ -1,9 +1,11 @@
 import { NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '../../../prisma/generated/client';
+import { Prisma, PrismaClient } from '../../../prisma/generated/client';
 import { TasksService } from '../tasks.service';
 
-// Mock PrismaClient entirely
+// Mock PrismaClient but preserve the real Prisma namespace (we need
+// Prisma.JsonNull, which is a runtime sentinel the service passes through).
 jest.mock('../../../prisma/generated/client', () => {
+  const actual = jest.requireActual('../../../prisma/generated/client');
   const mockPrisma = {
     task: {
       findMany: jest.fn(),
@@ -13,7 +15,7 @@ jest.mock('../../../prisma/generated/client', () => {
       delete: jest.fn(),
     },
   };
-  return { PrismaClient: jest.fn(() => mockPrisma) };
+  return { ...actual, PrismaClient: jest.fn(() => mockPrisma) };
 });
 
 describe('TasksService (unit)', () => {
@@ -57,7 +59,7 @@ describe('TasksService (unit)', () => {
       const result = await service.create('u1', { title: 'Buy milk' });
 
       expect(prisma.task.create).toHaveBeenCalledWith({
-        data: { userId: 'u1', title: 'Buy milk', dueAt: null, source: null },
+        data: { userId: 'u1', title: 'Buy milk', dueAt: null, source: Prisma.JsonNull },
       });
       expect(result).toBe(created);
     });
@@ -76,12 +78,12 @@ describe('TasksService (unit)', () => {
       const result = await service.create('u1', { title: 'Doctor', dueAt });
 
       expect(prisma.task.create).toHaveBeenCalledWith({
-        data: { userId: 'u1', title: 'Doctor', dueAt: new Date(dueAt), source: null },
+        data: { userId: 'u1', title: 'Doctor', dueAt: new Date(dueAt), source: Prisma.JsonNull },
       });
       expect(result).toBe(created);
     });
 
-    it('persists the source field as JSON when provided (cross-app provenance)', async () => {
+    it('persists the source field as native Json when provided (cross-app provenance)', async () => {
       const source = { app: 'say-things', dictationId: 'd1' };
       const created = {
         id: 'new3',
@@ -89,7 +91,7 @@ describe('TasksService (unit)', () => {
         userId: 'u1',
         completed: false,
         dueAt: null,
-        source: JSON.stringify(source),
+        source,
       };
       prisma.task.create.mockResolvedValueOnce(created);
 
@@ -100,7 +102,7 @@ describe('TasksService (unit)', () => {
           userId: 'u1',
           title: 'Email Jamie',
           dueAt: null,
-          source: JSON.stringify(source),
+          source,
         },
       });
       expect(result).toBe(created);

@@ -19,8 +19,9 @@ const config: Config = {
   transformIgnorePatterns: [
     '/node_modules/(?!(better-auth|better-call|@better-fetch|@better-auth|@noble|jose|nanoid|rou3|uncrypto|defu|destr|hookable|ufo|ohash|radix3|h3|cookie-es|iron-webcrypto|klona)/).*',
   ],
-  // Integration tests boot real NestJS app — allow extra time
-  testTimeout: 30000,
+  // Integration tests boot real NestJS app + Postgres testcontainer
+  testTimeout: 120000,
+  globalSetup: '<rootDir>/../jest.integration.globalSetup.ts',
 };
 
 export default config;

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '../../prisma/generated/client';
+import { Prisma, PrismaClient } from '../../prisma/generated/client';
 
 export interface UpdateTaskData {
   title?: string;
@@ -29,7 +29,7 @@ export class TasksService {
         userId,
         title: data.title,
         dueAt: data.dueAt ? new Date(data.dueAt) : null,
-        source: data.source ? JSON.stringify(data.source) : null,
+        source: data.source ? (data.source as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
     });
   }

@@ -4,11 +4,14 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ---- Things Do domain ----
+// ---- Things Do domain (things_do) ----
+// Auth tables live in things_auth (api-auth owns them). api-do reads sessions
+// via the auth-client (see prisma/auth-schema.prisma) and writes Task rows
+// here via this client.
 
 model Task {
   id        String    @id @default(cuid())
@@ -16,69 +19,12 @@ model Task {
   title     String
   completed Boolean   @default(false)
   dueAt     DateTime?
-  // JSON-encoded { app: string, dictationId?: string, ... }. Kept as String
-  // until the api-do Postgres migration switches it to native Json.
-  source    String?
+  // Optional cross-app provenance pointer (e.g. the dictation that created
+  // this task). Native Json now that we're on Postgres.
+  source    Json?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@index([userId, completed])
   @@index([userId, createdAt])
-}
-
-// ---- Mirrored from things_auth.db for Better Auth session validation ----
-
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  name          String?
-  image         String?
-  timezone      String    @default("UTC")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Account {
-  id                    String    @id @default(cuid())
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId             String
-  providerId            String
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  @@unique([providerId, accountId])
-}
-
-model Verification {
-  id         String   @id @default(cuid())
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([identifier, value])
 }

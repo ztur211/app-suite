@@ -1,44 +1,59 @@
 /**
  * Integration tests for the Tasks CRUD endpoints.
  *
- * Boots a real NestJS app against the api-do dev database. Signs up a test
- * user via Better Auth's internal API to get a properly signed session
- * cookie. Cleans up after itself.
+ * api-do runs against a Postgres testcontainer (provisioned in
+ * jest.integration.globalSetup.ts). The runtime instance uses two Prisma
+ * clients: `prisma` writes Tasks to things_do, `authPrisma` reads Sessions
+ * from things_auth via the read-only auth_reader role.
  *
- * NOTE: This test still runs against the pre-migration database. When the
- * api-do Postgres migration lands (see docs/superpowers/plans/2026-05-27-
- * postgres-migration.md), this suite will switch to the @things/testing
- * Postgres testcontainers helper, matching the api-auth pattern.
+ * Sign-up cannot use api-do's own Better Auth instance — that instance is
+ * read-only by design. The test instead spins up a temporary write-enabled
+ * Better Auth pointed at the auth_owner URL (stashed by globalSetup) and
+ * uses it just to sign the test user up + mint a session cookie.
  */
 import 'reflect-metadata';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+import { betterAuth } from 'better-auth';
+import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { AppModule } from '../app.module';
-import { auth, prisma } from '../auth/auth';
+import { prisma, authPrisma } from '../auth/auth';
+import { PrismaClient as AuthPrismaClient } from '../../prisma/generated/auth-client';
+
+declare global {
+  var __THINGS_AUTH_OWNER_URL__: string | undefined;
+}
 
 const TEST_EMAIL = `tasks-integration-${Date.now()}@things-test.local`;
 const TEST_PASSWORD = 'TestPass123!';
 
-/**
- * Signs up via Better Auth's internal API and extracts the signed session cookie.
- * This ensures we use the real HMAC-signed cookie format that Better Auth validates.
- */
 async function getSignedSessionCookie(): Promise<string> {
-  const headers = new Headers({ 'Content-Type': 'application/json' });
-  const res = await auth.api.signUpEmail({
-    body: { email: TEST_EMAIL, password: TEST_PASSWORD, name: 'Integration Test' },
-    headers,
-    asResponse: true,
+  const ownerUrl = globalThis.__THINGS_AUTH_OWNER_URL__;
+  if (!ownerUrl) throw new Error('globalSetup did not stash __THINGS_AUTH_OWNER_URL__');
+
+  const writeAuthPrisma = new AuthPrismaClient({ datasources: { db: { url: ownerUrl } } });
+  const writeAuth = betterAuth({
+    database: prismaAdapter(writeAuthPrisma, { provider: 'postgresql' }),
+    emailAndPassword: { enabled: true },
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    secret: process.env['BETTER_AUTH_SECRET']!,
+    basePath: '/auth',
   });
 
-  const setCookies = res.headers.get('set-cookie') ?? '';
-  // Extract the better-auth.session_token cookie value
-  const match = setCookies.match(/better-auth\.session_token=([^;]+)/);
-  if (!match) {
-    throw new Error(`No session cookie in sign-up response. Headers: ${setCookies}`);
+  try {
+    const res = await writeAuth.api.signUpEmail({
+      body: { email: TEST_EMAIL, password: TEST_PASSWORD, name: 'Integration Test' },
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      asResponse: true,
+    });
+    const setCookies = res.headers.get('set-cookie') ?? '';
+    const match = setCookies.match(/better-auth\.session_token=([^;]+)/);
+    if (!match) throw new Error(`No session cookie in sign-up response. Headers: ${setCookies}`);
+    return `better-auth.session_token=${match[1]}`;
+  } finally {
+    await writeAuthPrisma.$disconnect();
   }
-  return `better-auth.session_token=${match[1]}`;
 }
 
 describe('Tasks CRUD (integration)', () => {
@@ -47,7 +62,6 @@ describe('Tasks CRUD (integration)', () => {
   let createdTaskId: string;
 
   beforeAll(async () => {
-    // Get a real signed session cookie via Better Auth
     sessionCookie = await getSignedSessionCookie();
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -59,14 +73,22 @@ describe('Tasks CRUD (integration)', () => {
   });
 
   afterAll(async () => {
-    // Clean up: find user then delete tasks and user
-    const user = await prisma.user.findUnique({ where: { email: TEST_EMAIL } });
-    if (user) {
-      await prisma.task.deleteMany({ where: { userId: user.id } });
+    // Clean up Tasks via the domain client and the test user via the
+    // auth_owner URL (api-do's authPrisma is read-only and can't delete).
+    const ownerUrl = globalThis.__THINGS_AUTH_OWNER_URL__;
+    if (ownerUrl) {
+      const writeAuthPrisma = new AuthPrismaClient({ datasources: { db: { url: ownerUrl } } });
+      try {
+        const user = await writeAuthPrisma.user.findUnique({ where: { email: TEST_EMAIL } });
+        if (user) await prisma.task.deleteMany({ where: { userId: user.id } });
+        await writeAuthPrisma.user.deleteMany({ where: { email: TEST_EMAIL } });
+      } finally {
+        await writeAuthPrisma.$disconnect();
+      }
     }
-    await prisma.user.deleteMany({ where: { email: TEST_EMAIL } });
     await app.close();
     await prisma.$disconnect();
+    await authPrisma.$disconnect();
   });
 
   it('GET /tasks without cookie returns 401', async () => {
