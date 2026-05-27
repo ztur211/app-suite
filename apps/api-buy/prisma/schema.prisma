@@ -4,19 +4,25 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ---- Things Buy domain ----
+// ---- Things Buy domain (things_buy) ----
 //
 // Shopping items either originate from a user manually adding one in web-buy
 // or get pulled from api-say's PENDING_BUY queue (sourceDictationId set).
+// Auth tables live in things_auth (api-auth owns them); api-buy reads sessions
+// via the auth-client (see prisma/auth-schema.prisma).
 //
 // Status values: 'active' (not bought yet), 'bought' (user marked as done).
 
 model ShoppingItem {
-  id                String   @id @default(cuid())
+  id String @id @default(cuid())
+  // userId references things_auth.User.id. No FK constraint — Postgres can't
+  // enforce cross-database FKs, so referential integrity is the app layer's
+  // responsibility (User deletion ultimately cleans up via an app-level
+  // tombstone or a periodic GC; not yet implemented).
   userId            String
   title             String
   quantity          Int?
@@ -26,67 +32,7 @@ model ShoppingItem {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId, status])
   @@index([userId, createdAt])
   @@index([userId, sourceDictationId])
-}
-
-// ---- Mirrored from things_auth.db for Better Auth session validation ----
-
-model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  emailVerified Boolean        @default(false)
-  name          String?
-  image         String?
-  timezone      String         @default("UTC")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  shoppingItems ShoppingItem[]
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Account {
-  id                    String    @id @default(cuid())
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId             String
-  providerId            String
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  @@unique([providerId, accountId])
-}
-
-model Verification {
-  id         String   @id @default(cuid())
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([identifier, value])
 }
