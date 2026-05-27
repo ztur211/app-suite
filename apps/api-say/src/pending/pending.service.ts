@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '../../prisma/generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type PendingDestination = 'PENDING_BUY' | 'PENDING_EAT';
@@ -6,7 +7,7 @@ export type PendingDestination = 'PENDING_BUY' | 'PENDING_EAT';
 export interface PendingItem {
   dictationId: string;
   createdAt: string;
-  payload: unknown;
+  payload: Prisma.JsonValue;
   transcript: string;
 }
 
@@ -22,7 +23,7 @@ export class PendingService {
     return rows.map((r) => ({
       dictationId: r.id,
       createdAt: r.createdAt.toISOString(),
-      payload: JSON.parse(r.editedPayload ?? r.proposedPayload),
+      payload: r.editedPayload ?? r.proposedPayload,
       transcript: r.finalTranscript,
     }));
   }

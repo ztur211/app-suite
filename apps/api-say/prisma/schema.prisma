@@ -12,17 +12,35 @@ datasource db {
 //
 // Auth tables live in things_auth (api-auth owns them); api-say reads sessions
 // via the auth-client (see prisma/auth-schema.prisma).
-//
-// Enum-like columns (intent/destination/state/captureMode) and Json columns
-// (proposedPayload/editedPayload/usage) are still typed as String because the
-// app uses JSON.stringify/parse and Zod validation today. A follow-up commit
-// will switch them to native Postgres enums and Json once the tests are
-// updated to match.
-//
-// Intent values:          DO, NOTE, SEND, BUY, EAT
-// DictationState values:  proposed, confirmed, dispatched, cancelled
-// Destination values:     DO_THINGS, SAY_LIBRARY, CLIPBOARD, PENDING_BUY, PENDING_EAT
-// CaptureMode values:     tap, drive, type
+
+enum Intent {
+  DO
+  NOTE
+  SEND
+  BUY
+  EAT
+}
+
+enum DictationState {
+  proposed
+  confirmed
+  dispatched
+  cancelled
+}
+
+enum Destination {
+  DO_THINGS
+  SAY_LIBRARY
+  CLIPBOARD
+  PENDING_BUY
+  PENDING_EAT
+}
+
+enum CaptureMode {
+  tap
+  drive
+  type
+}
 
 model Dictation {
   id String @id @default(cuid())
@@ -33,20 +51,20 @@ model Dictation {
   previewTranscript String?
   finalTranscript   String
   language          String
-  captureMode       String  @default("tap")
+  captureMode       CaptureMode @default(tap)
 
-  intent          String
+  intent          Intent
   confidence      Float
-  proposedPayload String
-  editedPayload   String?
+  proposedPayload Json
+  editedPayload   Json?
 
-  state          String    @default("proposed")
-  destination    String
+  state          DictationState @default(proposed)
+  destination    Destination
   destinationRef String?
   dispatchedAt   DateTime?
   cancelledAt    DateTime?
 
-  usage String
+  usage Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

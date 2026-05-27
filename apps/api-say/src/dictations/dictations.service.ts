@@ -14,6 +14,7 @@ import {
   type IntentResult,
 } from '@things/types';
 import { AiClient, type Usage } from '@things/ai';
+import { Prisma, type Dictation, CaptureMode } from '../../prisma/generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DispatchService } from '../dispatch/dispatch.service';
 import { intentToDestination } from '../dispatch/intent-destination';
@@ -25,47 +26,12 @@ export interface CreateInput {
   userId: string;
   userTimezone: string;
   previewTranscript?: string;
-  captureMode: 'tap' | 'drive' | 'type';
+  captureMode: CaptureMode;
   /** Required for 'tap'/'drive'; ignored for 'type' (uses previewTranscript). */
   audioBuffer?: Buffer;
 }
 
-export interface DictationRow {
-  id: string;
-  userId: string;
-  audioPath: string | null;
-  previewTranscript: string | null;
-  finalTranscript: string;
-  language: string;
-  captureMode: string;
-  intent: string;
-  confidence: number;
-  proposedPayload: string;
-  editedPayload: string | null;
-  state: string;
-  destination: string;
-  destinationRef: string | null;
-  dispatchedAt: Date | null;
-  cancelledAt: Date | null;
-  usage: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export type DictationView = Omit<DictationRow, 'proposedPayload' | 'editedPayload' | 'usage'> & {
-  proposedPayload: unknown;
-  editedPayload: unknown | null;
-  usage: unknown;
-};
-
-function hydrate(row: DictationRow): DictationView {
-  return {
-    ...row,
-    proposedPayload: JSON.parse(row.proposedPayload),
-    editedPayload: row.editedPayload ? JSON.parse(row.editedPayload) : null,
-    usage: JSON.parse(row.usage),
-  };
-}
+export type DictationView = Dictation;
 
 const PAYLOAD_SCHEMA_BY_INTENT = {
   DO: taskPayload,
@@ -148,7 +114,7 @@ export class DictationsService {
         classifyUsage = { kind: 'tokens', inputTokens: 0, outputTokens: 0 };
       }
 
-      const row = (await this.prisma.dictation.create({
+      const dictation = await this.prisma.dictation.create({
         data: {
           id,
           userId: input.userId,
@@ -158,21 +124,20 @@ export class DictationsService {
           captureMode: input.captureMode,
           intent: proposal.intent,
           confidence: proposal.confidence,
-          proposedPayload: JSON.stringify(proposal.payload),
-          state: 'proposed',
+          proposedPayload: proposal.payload,
           destination: intentToDestination[proposal.intent],
-          usage: JSON.stringify({ transcribe: trans.usage, classify: classifyUsage }),
+          usage: { transcribe: trans.usage, classify: classifyUsage } as Prisma.InputJsonValue,
         },
-      })) as unknown as DictationRow;
+      });
 
-      return { dictation: hydrate(row), proposal };
+      return { dictation, proposal };
     } finally {
       if (audioPath) await fs.unlink(audioPath).catch(() => undefined);
     }
   }
 
-  private async getOwned(id: string, userId: string): Promise<DictationRow> {
-    const d = (await this.prisma.dictation.findUnique({ where: { id } })) as DictationRow | null;
+  private async getOwned(id: string, userId: string): Promise<Dictation> {
+    const d = await this.prisma.dictation.findUnique({ where: { id } });
     if (!d || d.userId !== userId) throw new NotFoundException();
     return d;
   }
@@ -185,22 +150,22 @@ export class DictationsService {
     if (d.state !== 'proposed') {
       throw new BadRequestException(`Cannot dispatch in state=${d.state}`);
     }
-    const effective = d.editedPayload ? JSON.parse(d.editedPayload) : JSON.parse(d.proposedPayload);
+    const effective = (d.editedPayload ?? d.proposedPayload) as Prisma.JsonObject;
     const out = await this.dispatchSvc.dispatch({
-      intent: d.intent as Intent,
+      intent: d.intent,
       dictationId: d.id,
       userId,
-      payload: effective,
+      payload: effective as never,
     });
-    const updated = (await this.prisma.dictation.update({
+    const dictation = await this.prisma.dictation.update({
       where: { id },
       data: {
         state: 'dispatched',
         destinationRef: out.destinationRef,
         dispatchedAt: new Date(),
       },
-    })) as unknown as DictationRow;
-    return { dictation: hydrate(updated), renderedEmail: out.renderedEmail };
+    });
+    return { dictation, renderedEmail: out.renderedEmail };
   }
 
   async undoDispatch(id: string, userId: string): Promise<DictationView> {
@@ -209,15 +174,14 @@ export class DictationsService {
       throw new BadRequestException(`Cannot undo in state=${d.state}`);
     }
     await this.dispatchSvc.undo({
-      intent: d.intent as Intent,
+      intent: d.intent,
       userId,
       destinationRef: d.destinationRef,
     });
-    const updated = (await this.prisma.dictation.update({
+    return this.prisma.dictation.update({
       where: { id },
       data: { state: 'proposed', destinationRef: null, dispatchedAt: null },
-    })) as unknown as DictationRow;
-    return hydrate(updated);
+    });
   }
 
   async reclassify(
@@ -250,19 +214,19 @@ export class DictationsService {
       { cacheSystem: true, context: { userId, callerApp: 'api-say' } },
     );
 
-    const updated = (await this.prisma.dictation.update({
+    const dictation = await this.prisma.dictation.update({
       where: { id },
       data: {
         intent: forceIntent,
-        proposedPayload: JSON.stringify(r.value),
+        proposedPayload: r.value as Prisma.InputJsonValue,
         destination: intentToDestination[forceIntent],
-        editedPayload: null,
+        editedPayload: Prisma.DbNull,
         confidence: 1.0,
       },
-    })) as unknown as DictationRow;
+    });
 
     return {
-      dictation: hydrate(updated),
+      dictation,
       proposal: { intent: forceIntent, payload: r.value, confidence: 1.0 } as IntentResult,
     };
   }
@@ -272,23 +236,21 @@ export class DictationsService {
     if (d.state !== 'proposed') {
       throw new BadRequestException(`Cannot edit in state=${d.state}`);
     }
-    const updated = (await this.prisma.dictation.update({
+    return this.prisma.dictation.update({
       where: { id },
-      data: { editedPayload: JSON.stringify(editedPayload) },
-    })) as unknown as DictationRow;
-    return hydrate(updated);
+      data: { editedPayload: editedPayload as Prisma.InputJsonValue },
+    });
   }
 
   async list(
     userId: string,
     opts: { intent?: Intent; limit?: number } = {},
   ): Promise<DictationView[]> {
-    const rows = (await this.prisma.dictation.findMany({
+    return this.prisma.dictation.findMany({
       where: { userId, ...(opts.intent ? { intent: opts.intent } : {}) },
       orderBy: { createdAt: 'desc' },
       take: opts.limit ?? 50,
-    })) as unknown as DictationRow[];
-    return rows.map(hydrate);
+    });
   }
 
   async remove(id: string, userId: string): Promise<void> {
