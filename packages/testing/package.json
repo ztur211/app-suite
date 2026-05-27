@@ -4,6 +4,16 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./postgres": {
+      "types": "./dist/postgres.d.ts",
+      "default": "./dist/postgres.js"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -17,8 +27,14 @@
     "test:e2e": "jest --config jest.e2e.config.ts --passWithNoTests",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@testcontainers/postgresql": "^12.0.0",
+    "pg": "^8.21.0",
+    "testcontainers": "^12.0.0"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.13",
+    "@types/pg": "^8.20.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
