@@ -23,13 +23,13 @@
 - ✅ **api-say schema-type cleanup**: `Dictation.{proposedPayload,editedPayload,usage}` are now native `Json`; `intent`/`state`/`destination`/`captureMode` are native Postgres `enum`s. `DictationsService` and `PendingService` no longer wrap reads/writes in `JSON.stringify`/`JSON.parse`; the awkward `DictationRow`/`hydrate()` indirection is gone and `DictationView` is just the Prisma `Dictation` type. Integration spec seed data updated to pass objects.
 - ✅ **`infra/docker-compose.dev.yml`**: local Postgres + Redis + Mailhog stack. `infra/postgres/init.sql` provisions the same per-app DB+role topology as `setupSuitePostgres` (six `<app>_owner` roles, six `things_<app>` DBs, plus `auth_reader` with `CONNECT` on `things_auth` and `ALTER DEFAULT PRIVILEGES FOR ROLE auth_owner ... GRANT SELECT` so that any future tables auth_owner creates auto-grant to auth_reader). Devs no longer need testcontainers to run the apps.
 - ✅ **api-buy/api-eat/api-send integration-test scaffolding**: each app now has `jest.integration.globalSetup.ts` + `tsconfig.jest.json` + an ESM-mode `jest.integration.config.ts` matching api-do's template; `@things/testing` + `cross-env` added to devDeps; `test:integration` script wrapped with `cross-env NODE_OPTIONS=--experimental-vm-modules`. Verified end-to-end on api-buy via a throwaway smoke spec (testcontainer boots, both schemas push, domain client queries `SELECT now()` from `things_buy`, auth_reader URL points at `things_auth`). The other two apps use the same template with only the app-name token swapped, so they inherit the same correctness.
+- ✅ **Legacy `apps/api-auth/prisma/things_auth.db` removed** from local working trees. The file was always gitignored (`*.db` in `.gitignore`) and nothing in code/config referenced it, so the cleanup is purely a local-disk delete — no commit needed beyond this plan note.
 
 **Still deferred to follow-up commits:**
 
 - **Cross-app E2E unskip**: `apps/api-say/__tests__/e2e/cross-app/say-to-do.e2e.spec.ts` is still `describe.skip`'d. With Postgres + per-app DBs in place the original blocker (shared Prisma client) is gone; wiring it up against a multi-app testcontainer (`apps: ['auth', 'do', 'say']`) is the unblocked next step. The comment inside the spec file still cites the old "shared @prisma/client output" blocker — that's outdated; each app already emits to its own `./prisma/generated/client/` directory.
 - **First real integration spec for api-buy/api-eat/api-send**: scaffolding is in place; the first spec just needs to land. Pattern: see `apps/api-do/src/tasks/__tests__/tasks.integration.spec.ts` or `apps/api-say/src/dictations/__tests__/dictations.integration.spec.ts`.
 - **Production migrations (`prisma migrate dev --name init`)**: tests use `prisma db push`. Production deploys will need real migration files generated against a Postgres instance and committed.
-- **Remove `apps/api-auth/prisma/things_auth.db`**: the legacy SQLite file is still on disk (gitignored) but nothing reads from it anymore.
 
 **Tech Stack:** Postgres 16 (image `postgres:16-alpine`), Prisma 5.22, Better Auth 1.6+, testcontainers 12, NestJS 11, Jest 29.
 
@@ -133,9 +133,9 @@ After all five apps are migrated:
 
 `apps/api-say/__tests__/e2e/cross-app/say-to-do.e2e.spec.ts` is currently `describe.skip`'d on the assumption that per-app Prisma clients couldn't coexist. That assumption is no longer true (each app already generates to `./prisma/generated/client/`; the Postgres migration only reinforces it). Wire the test against a testcontainers Postgres provisioned with `apps: ['auth', 'do', 'say']`. The test boots both api-say and api-do in-process, exercises the DoSdk → api-do dispatch path, and asserts the resulting Task in api-do's DB.
 
-- [ ] **Step 11: Remove the legacy `apps/api-auth/prisma/things_auth.db` file**
+- [x] **Step 11: Remove the legacy `apps/api-auth/prisma/things_auth.db` file**
 
-`git rm` and add a `.gitkeep` if any tooling still expects the directory.
+File was gitignored (`*.db`) so the cleanup is a local-disk delete; the `apps/api-auth/prisma/` directory still contains `schema.prisma` + `generated/`, so no `.gitkeep` is needed.
 
 ---
 
