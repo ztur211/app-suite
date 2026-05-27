@@ -8,6 +8,7 @@ import {
 import { lastValueFrom, of } from 'rxjs';
 import { IdempotencyInterceptor } from '../idempotency.interceptor';
 import { PrismaService } from '../../prisma/prisma.service';
+import { createAuthOwnerPrisma } from '../../test-utils/auth-owner-prisma';
 
 describe('IdempotencyInterceptor (integration)', () => {
   let prisma: PrismaService;
@@ -17,16 +18,21 @@ describe('IdempotencyInterceptor (integration)', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.$connect();
-    await prisma.user.upsert({
-      where: { id: userId },
-      create: {
-        id: userId,
-        email: `idem-${Date.now()}@things-test.local`,
-        emailVerified: true,
-        timezone: 'UTC',
-      },
-      update: {},
-    });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.upsert({
+        where: { id: userId },
+        create: {
+          id: userId,
+          email: `idem-${Date.now()}@things-test.local`,
+          emailVerified: true,
+          timezone: 'UTC',
+        },
+        update: {},
+      });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     interceptor = new IdempotencyInterceptor(prisma);
   });
 
@@ -36,7 +42,12 @@ describe('IdempotencyInterceptor (integration)', () => {
 
   afterAll(async () => {
     await prisma.idempotencyKey.deleteMany({ where: { userId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.deleteMany({ where: { id: userId } });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     await prisma.$disconnect();
   });
 
@@ -124,23 +135,25 @@ describe('IdempotencyInterceptor (integration)', () => {
     await lastValueFrom(await interceptor.intercept(ctx1, nextWith({ id: 'd1' })));
 
     const otherUserId = 'u-idem-other';
-    await prisma.user.upsert({
-      where: { id: otherUserId },
-      create: {
-        id: otherUserId,
-        email: `idem-other-${Date.now()}@things-test.local`,
-        emailVerified: true,
-        timezone: 'UTC',
-      },
-      update: {},
-    });
+    const writeAuth = createAuthOwnerPrisma();
     try {
+      await writeAuth.user.upsert({
+        where: { id: otherUserId },
+        create: {
+          id: otherUserId,
+          email: `idem-other-${Date.now()}@things-test.local`,
+          emailVerified: true,
+          timezone: 'UTC',
+        },
+        update: {},
+      });
       const ctx2 = makeCtx({ 'idempotency-key': 'k4' }, { a: 1 }, otherUserId);
       await expect(interceptor.intercept(ctx2, nextWith({}))).rejects.toBeInstanceOf(
         ConflictException,
       );
     } finally {
-      await prisma.user.deleteMany({ where: { id: otherUserId } });
+      await writeAuth.user.deleteMany({ where: { id: otherUserId } });
+      await writeAuth.$disconnect();
     }
   });
 });

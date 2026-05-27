@@ -7,6 +7,7 @@ import { AiClient } from '@things/ai';
 import { AppModule } from '../../app.module';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SessionGuard } from '../../auth/session.guard';
+import { createAuthOwnerPrisma } from '../../test-utils/auth-owner-prisma';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyAsync = (...args: any[]) => Promise<any>;
@@ -61,23 +62,33 @@ describe('Dictations (integration)', () => {
     await app.init();
 
     prisma = mod.get(PrismaService);
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {},
-      create: {
-        id: userId,
-        email: `dict-int-${Date.now()}@things-test.local`,
-        emailVerified: true,
-        timezone: 'Pacific/Auckland',
-      },
-    });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          email: `dict-int-${Date.now()}@things-test.local`,
+          emailVerified: true,
+          timezone: 'Pacific/Auckland',
+        },
+      });
+    } finally {
+      await writeAuth.$disconnect();
+    }
   });
 
   afterAll(async () => {
     await prisma.dictation.deleteMany({ where: { userId } });
     await prisma.idempotencyKey.deleteMany({ where: { userId } });
     await prisma.aiCall.deleteMany({ where: { userId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.deleteMany({ where: { id: userId } });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     await app.close();
   });
 

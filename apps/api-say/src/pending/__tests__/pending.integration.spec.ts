@@ -5,6 +5,7 @@ import request from 'supertest';
 import { signServiceToken } from '@things/auth';
 import { AppModule } from '../../app.module';
 import { PrismaService } from '../../prisma/prisma.service';
+import { createAuthOwnerPrisma } from '../../test-utils/auth-owner-prisma';
 
 const SECRET = 'dev-things-auth-secret-min-32-chars-long-abc';
 const userId = 'u-pend-int';
@@ -19,16 +20,21 @@ describe('Pending (integration)', () => {
     app = mod.createNestApplication();
     await app.init();
     prisma = mod.get(PrismaService);
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {},
-      create: {
-        id: userId,
-        email: `pend-${Date.now()}@things-test.local`,
-        emailVerified: true,
-        timezone: 'UTC',
-      },
-    });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          email: `pend-${Date.now()}@things-test.local`,
+          emailVerified: true,
+          timezone: 'UTC',
+        },
+      });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     await prisma.dictation.deleteMany({ where: { userId } });
     await prisma.dictation.createMany({
       data: [
@@ -66,7 +72,12 @@ describe('Pending (integration)', () => {
 
   afterAll(async () => {
     await prisma.dictation.deleteMany({ where: { userId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.deleteMany({ where: { id: userId } });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     await app.close();
   });
 

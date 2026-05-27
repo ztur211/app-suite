@@ -1,5 +1,6 @@
 import { IdempotencyCleanupCron } from '../cleanup.cron';
 import { PrismaService } from '../../prisma/prisma.service';
+import { createAuthOwnerPrisma } from '../../test-utils/auth-owner-prisma';
 
 describe('IdempotencyCleanupCron (integration)', () => {
   let prisma: PrismaService;
@@ -9,22 +10,32 @@ describe('IdempotencyCleanupCron (integration)', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.$connect();
-    await prisma.user.upsert({
-      where: { id: userId },
-      create: {
-        id: userId,
-        email: `cron-${Date.now()}@things-test.local`,
-        emailVerified: true,
-        timezone: 'UTC',
-      },
-      update: {},
-    });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.upsert({
+        where: { id: userId },
+        create: {
+          id: userId,
+          email: `cron-${Date.now()}@things-test.local`,
+          emailVerified: true,
+          timezone: 'UTC',
+        },
+        update: {},
+      });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     cron = new IdempotencyCleanupCron(prisma);
   });
 
   afterAll(async () => {
     await prisma.idempotencyKey.deleteMany({ where: { userId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.deleteMany({ where: { id: userId } });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     await prisma.$disconnect();
   });
 

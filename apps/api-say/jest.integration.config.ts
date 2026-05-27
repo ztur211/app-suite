@@ -19,7 +19,8 @@ const config: Config = {
   transformIgnorePatterns: [
     '/node_modules/(?!(better-auth|better-call|@better-fetch|@better-auth|@noble|jose|nanoid|rou3|uncrypto|defu|destr|hookable|ufo|ohash|radix3|h3|cookie-es|iron-webcrypto|klona)/).*',
   ],
-  testTimeout: 60000,
+  testTimeout: 120000,
+  globalSetup: '<rootDir>/../jest.integration.globalSetup.ts',
 };
 
 export default config;

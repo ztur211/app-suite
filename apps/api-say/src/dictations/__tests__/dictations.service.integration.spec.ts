@@ -6,6 +6,7 @@ import { AiClient } from '@things/ai';
 import { DictationsService } from '../dictations.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { DispatchService } from '../../dispatch/dispatch.service';
+import { createAuthOwnerPrisma } from '../../test-utils/auth-owner-prisma';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyAsync = (...args: any[]) => Promise<any>;
@@ -30,16 +31,21 @@ describe('DictationsService.create (integration)', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.$connect();
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {},
-      create: {
-        id: userId,
-        email: `svc-${Date.now()}@things-test.local`,
-        emailVerified: true,
-        timezone: 'Pacific/Auckland',
-      },
-    });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          email: `svc-${Date.now()}@things-test.local`,
+          emailVerified: true,
+          timezone: 'Pacific/Auckland',
+        },
+      });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'say-test-'));
   });
 
@@ -52,7 +58,12 @@ describe('DictationsService.create (integration)', () => {
 
   afterAll(async () => {
     await prisma.dictation.deleteMany({ where: { userId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    const writeAuth = createAuthOwnerPrisma();
+    try {
+      await writeAuth.user.deleteMany({ where: { id: userId } });
+    } finally {
+      await writeAuth.$disconnect();
+    }
     await prisma.$disconnect();
     await fs.rm(tmpDir, { recursive: true, force: true });
   });

@@ -4,16 +4,20 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ---- Things Say domain ----
+// ---- Things Say domain (things_say) ----
 //
-// Enum-like columns are typed as String for now (validated at the app layer
-// via Zod schemas in @things/types). The api-say Postgres migration will
-// convert intent/destination/state/captureMode into native Postgres enums and
-// payload columns into native Json.
+// Auth tables live in things_auth (api-auth owns them); api-say reads sessions
+// via the auth-client (see prisma/auth-schema.prisma).
+//
+// Enum-like columns (intent/destination/state/captureMode) and Json columns
+// (proposedPayload/editedPayload/usage) are still typed as String because the
+// app uses JSON.stringify/parse and Zod validation today. A follow-up commit
+// will switch them to native Postgres enums and Json once the tests are
+// updated to match.
 //
 // Intent values:          DO, NOTE, SEND, BUY, EAT
 // DictationState values:  proposed, confirmed, dispatched, cancelled
@@ -21,32 +25,31 @@ datasource db {
 // CaptureMode values:     tap, drive, type
 
 model Dictation {
-  id                String    @id @default(cuid())
-  userId            String
+  id String @id @default(cuid())
+  // userId references things_auth.User.id (no cross-DB FK).
+  userId String
 
   audioPath         String?
   previewTranscript String?
   finalTranscript   String
   language          String
-  captureMode       String    @default("tap")
+  captureMode       String  @default("tap")
 
-  intent            String
-  confidence        Float
-  proposedPayload   String
-  editedPayload     String?
+  intent          String
+  confidence      Float
+  proposedPayload String
+  editedPayload   String?
 
-  state             String    @default("proposed")
-  destination       String
-  destinationRef    String?
-  dispatchedAt      DateTime?
-  cancelledAt       DateTime?
+  state          String    @default("proposed")
+  destination    String
+  destinationRef String?
+  dispatchedAt   DateTime?
+  cancelledAt    DateTime?
 
-  usage             String
+  usage String
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
   @@index([userId, intent, state])
@@ -54,7 +57,7 @@ model Dictation {
 }
 
 model IdempotencyKey {
-  key             String   @id
+  key             String @id
   userId          String
   endpoint        String
   requestBodyHash String
@@ -63,92 +66,33 @@ model IdempotencyKey {
   expiresAt       DateTime
   createdAt       DateTime @default(now())
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([expiresAt])
   @@index([userId, endpoint, createdAt])
 }
 
-// ---- AI usage audit (mirrored from things_auth per foundation spec §5.2) ----
-// Written by api-say's PrismaUsageLogger so each AI call is auditable.
+// ---- AI usage audit (per foundation spec §5.2) ----
+// Written by api-say's PrismaUsageLogger via the domain client. The
+// foundation spec calls AiCall a "cross-app cost center"; each consumer app
+// keeps its own copy in its own DB. Reporting aggregates across apps.
 
 model AiCall {
-  id          String   @id @default(cuid())
-  userId      String?
-  callerApp   String
-  operation   String
-  provider    String
-  model       String
+  id               String   @id @default(cuid())
+  userId           String?
+  callerApp        String
+  operation        String
+  provider         String
+  model            String
   inputTokens      Int?
   outputTokens     Int?
   cacheReadTokens  Int?
   cacheWriteTokens Int?
-  audioSeconds Float?
-  vectorCount  Int?
-  durationMs   Int
-  fellBackTo   String?
-  startedAt    DateTime
-  createdAt    DateTime @default(now())
+  audioSeconds     Float?
+  vectorCount      Int?
+  durationMs       Int
+  fellBackTo       String?
+  startedAt        DateTime
+  createdAt        DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([callerApp, createdAt])
-}
-
-// ---- Mirrored from things_auth.db for session validation ----
-
-model User {
-  id            String           @id @default(cuid())
-  email         String           @unique
-  emailVerified Boolean          @default(false)
-  name          String?
-  image         String?
-  timezone      String           @default("UTC")
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  dictations    Dictation[]
-  idempotency   IdempotencyKey[]
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Account {
-  id                    String    @id @default(cuid())
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId             String
-  providerId            String
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  @@unique([providerId, accountId])
-}
-
-model Verification {
-  id         String   @id @default(cuid())
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([identifier, value])
 }

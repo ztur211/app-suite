@@ -13,8 +13,8 @@
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --passWithNoTests",
     "test:e2e": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.e2e.config.ts --passWithNoTests",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push --skip-generate",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma && prisma generate --schema=prisma/auth-schema.prisma",
+    "db:push": "prisma db push --skip-generate --schema=prisma/schema.prisma",
     "db:migrate": "prisma migrate dev",
     "eval:intent": "ts-node __tests__/eval/intent-classification/run-eval.ts"
   },
@@ -45,6 +45,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^20.14.0",
     "@types/supertest": "^6.0.2",
+    "@things/testing": "*",
     "cross-env": "^7.0.3",
     "jest": "^29.7.0",
     "prisma": "^5.22.0",
