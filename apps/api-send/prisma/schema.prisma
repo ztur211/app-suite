@@ -4,18 +4,19 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ---- Things Send domain ----
+// ---- Things Send domain (things_send) ----
 //
 // Message represents an outbound or inbound communication that this user
 // owns. P1 scope: drafts and outbound queue only — provider integrations
 // (Gmail/Outlook/Slack/Discord/Telegram) land in a later phase. Inbound
 // rows arrive via provider sync workers; outbound rows arrive either from
 // the user composing in the app or from api-say parking a SEND intent as
-// PENDING_SEND (future work).
+// PENDING_SEND (future work). Auth tables live in things_auth (api-auth
+// owns them); api-send reads sessions via the auth-client.
 //
 // channel values: 'email', 'slack', 'discord', 'telegram'
 // kind values: 'outbound' (user → world), 'inbound' (world → user)
@@ -23,7 +24,9 @@ datasource db {
 // status values for inbound: 'unread', 'read', 'archived'
 
 model Message {
-  id                String   @id @default(cuid())
+  id String @id @default(cuid())
+  // userId references things_auth.User.id. No FK constraint — cross-database
+  // FKs aren't supported; integrity is enforced at the app layer.
   userId            String
   channel           String
   kind              String
@@ -35,68 +38,8 @@ model Message {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId, kind, status])
   @@index([userId, channel])
   @@index([userId, createdAt])
   @@index([userId, sourceDictationId])
-}
-
-// ---- Mirrored from things_auth.db for Better Auth session validation ----
-
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  name          String?
-  image         String?
-  timezone      String    @default("UTC")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  messages      Message[]
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Account {
-  id                    String    @id @default(cuid())
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId             String
-  providerId            String
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  @@unique([providerId, accountId])
-}
-
-model Verification {
-  id         String   @id @default(cuid())
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([identifier, value])
 }
