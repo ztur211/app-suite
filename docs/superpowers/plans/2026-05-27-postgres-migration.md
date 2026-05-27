@@ -8,10 +8,23 @@
 
 **Status as of 2026-05-27:**
 
-- ✅ `@things/testing` ships `setupSuitePostgres({ apps, authReader? })` (commit forthcoming this session). Provisions per-app DBs + owner roles + optional read-only `auth_reader` role for cross-app session lookup. Container cleanup is handled by testcontainers' Ryuk sidecar.
-- ✅ `api-auth` fully migrated end-to-end: `schema.prisma` provider is `postgresql`; Better Auth adapter uses `'postgresql'`; `.env` + `.env.example` use a Postgres connection string; integration tests use a `jest.integration.globalSetup.ts` that boots a Postgres testcontainer, sets `DATABASE_URL`, and runs `prisma db push --skip-generate`. All 5 `auth.integration.spec.ts` cases pass green.
+- ✅ `@things/testing` ships `setupSuitePostgres({ apps, authReader? })`. Provisions per-app DBs + owner roles + optional read-only `auth_reader` role for cross-app session lookup. Container cleanup is handled by testcontainers' Ryuk sidecar.
+- ✅ `api-auth` fully migrated end-to-end (commit `42a5533`): provider `postgresql`; Better Auth adapter postgresql; `.env`/.env.example use a Postgres URL; `jest.integration.globalSetup.ts` boots a Postgres testcontainer and runs `prisma db push`. All 5 `auth.integration.spec.ts` cases pass green.
+- ✅ `api-do`, `api-buy`, `api-eat`, `api-send`, `api-say` all migrated using the two-Prisma-client pattern (option B below): domain client connects to `things_<app>` via `<app>_owner`; second client (`authPrisma`) connects to `things_auth` via the read-only `auth_reader` role. Better Auth's `prismaAdapter` is constructed with `authPrisma`. Each app exposes `apps/<app>/prisma/auth-schema.prisma` mirroring the Better Auth tables and generating into `./generated/auth-client/`.
+  - **api-do**: commit `5e6a69c`. 8 integration tests pass; Task.source converted to native Json.
+  - **api-buy**: commit `da8c733`. Unit tests only (no integration tests yet); schema cleanup only.
+  - **api-eat**: commit `ece1b89`. Same shape as api-buy.
+  - **api-send**: commit `7724e44`. Same shape as api-buy.
+  - **api-say**: commit `7ff77b5`. 18 integration tests pass against Postgres; new `src/test-utils/auth-owner-prisma.ts` lets tests seed users via a write-enabled auth client.
 - ✅ All docs/specs/plans/CLAUDE.md scrubbed of SQLite references (this plan documents the migration that replaced it).
-- ⏳ `api-do`, `api-say`, `api-buy`, `api-eat`, `api-send` still run against SQLite. Their `schema.prisma` files still say `provider = "sqlite"`, their `auth.ts` files still pass `provider: 'sqlite'` to the Better Auth adapter, and their `.env` files still point at `file:` URLs. These five apps are the scope of this plan.
+
+**Deferred to follow-up commits:**
+
+- **api-say schema-type cleanup**: the Json columns (`Dictation.proposedPayload` / `editedPayload` / `usage`) and the string-enum columns (`intent` / `state` / `destination` / `captureMode`) are still typed as `String` for backward-compatibility with the existing `JSON.stringify` / `JSON.parse` code paths and Zod-based validation. Converting them to native `Json` / Postgres `enum` requires touching `DictationsService` plus every test that asserts on those shapes — a clean follow-up commit, not part of the migration itself.
+- **Cross-app E2E unskip**: `apps/api-say/__tests__/e2e/cross-app/say-to-do.e2e.spec.ts` is still `describe.skip`'d. With Postgres + per-app DBs in place the original blocker (shared Prisma client) is gone; wiring it up against a multi-app testcontainer (`apps: ['auth', 'do', 'say']`) is the unblocked next step.
+- **api-buy/api-eat/api-send integration tests**: these apps don't have integration tests yet, so they skipped `jest.integration.globalSetup.ts`. When the first one lands, copy the api-do template.
+- **Production migrations (`prisma migrate dev --name init`)**: tests use `prisma db push`. Production deploys will need real migration files generated against a Postgres instance and committed.
+- **Remove `apps/api-auth/prisma/things_auth.db`**: the legacy SQLite file is still on disk (gitignored) but nothing reads from it anymore.
 
 **Tech Stack:** Postgres 16 (image `postgres:16-alpine`), Prisma 5.22, Better Auth 1.6+, testcontainers 12, NestJS 11, Jest 29.
 
