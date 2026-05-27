@@ -25,8 +25,9 @@ export interface CreateInput {
   userId: string;
   userTimezone: string;
   previewTranscript?: string;
-  captureMode: 'tap' | 'drive';
-  audioBuffer: Buffer;
+  captureMode: 'tap' | 'drive' | 'type';
+  /** Required for 'tap'/'drive'; ignored for 'type' (uses previewTranscript). */
+  audioBuffer?: Buffer;
 }
 
 export interface DictationRow {
@@ -87,12 +88,34 @@ export class DictationsService {
 
   async create(input: CreateInput): Promise<{ dictation: DictationView; proposal: IntentResult }> {
     const id = input.idempotencyKey;
-    const audioPath = path.join(this.tmpDir, `${id}.webm`);
-    await fs.mkdir(this.tmpDir, { recursive: true });
-    await fs.writeFile(audioPath, input.audioBuffer);
+    const isTyped = input.captureMode === 'type';
+
+    if (isTyped) {
+      if (!input.previewTranscript || input.previewTranscript.trim() === '') {
+        throw new BadRequestException("previewTranscript is required for captureMode 'type'");
+      }
+    } else {
+      if (!input.audioBuffer) {
+        throw new BadRequestException(
+          `audio file is required for captureMode '${input.captureMode}'`,
+        );
+      }
+    }
+
+    const audioPath = isTyped ? null : path.join(this.tmpDir, `${id}.webm`);
+    if (audioPath && input.audioBuffer) {
+      await fs.mkdir(this.tmpDir, { recursive: true });
+      await fs.writeFile(audioPath, input.audioBuffer);
+    }
 
     try {
-      const trans = await this.ai.transcribe(input.audioBuffer);
+      const trans = isTyped
+        ? {
+            text: input.previewTranscript ?? '',
+            language: 'en',
+            usage: { kind: 'audio' as const, seconds: 0 },
+          }
+        : await this.ai.transcribe(input.audioBuffer as Buffer);
       const nowLocal = DateTime.now().setZone(input.userTimezone).toISO();
 
       let proposal: IntentResult;
@@ -144,7 +167,7 @@ export class DictationsService {
 
       return { dictation: hydrate(row), proposal };
     } finally {
-      await fs.unlink(audioPath).catch(() => undefined);
+      if (audioPath) await fs.unlink(audioPath).catch(() => undefined);
     }
   }
 

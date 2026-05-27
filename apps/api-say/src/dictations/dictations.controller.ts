@@ -46,7 +46,7 @@ export class DictationsController {
     @Req() req: Request,
     @Headers('idempotency-key') idempotencyKey: string,
     @Body() body: CreateDictationDto,
-    @UploadedFile() audio: MulterFile,
+    @UploadedFile() audio?: MulterFile,
   ) {
     const session = requireSession(req);
     return this.svc.create({
@@ -55,7 +55,7 @@ export class DictationsController {
       userTimezone: session.user.timezone,
       previewTranscript: body.previewTranscript,
       captureMode: body.captureMode,
-      audioBuffer: audio.buffer,
+      audioBuffer: audio?.buffer,
     });
   }
 

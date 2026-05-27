@@ -1,18 +1,22 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { jest } from '@jest/globals';
 import { AiClient } from '@things/ai';
 import { DictationsService } from '../dictations.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { DispatchService } from '../../dispatch/dispatch.service';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyAsync = (...args: any[]) => Promise<any>;
+
 class StubAi extends AiClient {
-  transcribe = jest.fn();
-  chat = jest.fn();
-  chatStructured = jest.fn();
-  summarize = jest.fn();
-  embed = jest.fn();
-  vision = jest.fn();
+  transcribe = jest.fn<AnyAsync>();
+  chat = jest.fn<AnyAsync>();
+  chatStructured = jest.fn<AnyAsync>();
+  summarize = jest.fn<AnyAsync>();
+  embed = jest.fn<AnyAsync>();
+  vision = jest.fn<AnyAsync>();
 }
 
 describe('DictationsService.create (integration)', () => {
@@ -128,5 +132,54 @@ describe('DictationsService.create (integration)', () => {
     expect(out.dictation.intent).toBe('NOTE');
     expect(out.dictation.confidence).toBe(0);
     expect((out.dictation.proposedPayload as { body: string }).body).toBe('umm');
+  });
+
+  it("captureMode: 'type' skips transcribe and uses previewTranscript as final", async () => {
+    ai.chatStructured.mockResolvedValue({
+      value: {
+        intent: 'NOTE',
+        payload: { body: 'remember the milk' },
+        confidence: 0.95,
+      },
+      usage: { kind: 'tokens', inputTokens: 50, outputTokens: 10 },
+    });
+
+    const id = 'd-svc-int-typed';
+    const out = await svc.create({
+      idempotencyKey: id,
+      userId,
+      userTimezone: 'UTC',
+      previewTranscript: 'remember the milk',
+      captureMode: 'type',
+    });
+
+    expect(ai.transcribe).not.toHaveBeenCalled();
+    expect(out.dictation.finalTranscript).toBe('remember the milk');
+    expect(out.dictation.intent).toBe('NOTE');
+    expect(out.dictation.captureMode).toBe('type');
+  });
+
+  it("captureMode: 'type' rejects empty previewTranscript", async () => {
+    await expect(
+      svc.create({
+        idempotencyKey: 'd-svc-int-typed-bad',
+        userId,
+        userTimezone: 'UTC',
+        previewTranscript: '   ',
+        captureMode: 'type',
+      }),
+    ).rejects.toThrow(/previewTranscript is required/);
+  });
+
+  it("captureMode: 'tap' requires audioBuffer", async () => {
+    await expect(
+      svc.create({
+        idempotencyKey: 'd-svc-int-noaudio',
+        userId,
+        userTimezone: 'UTC',
+        previewTranscript: 'whatever',
+        captureMode: 'tap',
+      }),
+    ).rejects.toThrow(/audio file is required/);
   });
 });
