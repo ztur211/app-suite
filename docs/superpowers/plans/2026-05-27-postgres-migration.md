@@ -18,9 +18,13 @@
   - **api-say**: commit `7ff77b5`. 18 integration tests pass against Postgres; new `src/test-utils/auth-owner-prisma.ts` lets tests seed users via a write-enabled auth client.
 - ✅ All docs/specs/plans/CLAUDE.md scrubbed of SQLite references (this plan documents the migration that replaced it).
 
-**Deferred to follow-up commits:**
+**Shipped follow-ups:**
 
-- **api-say schema-type cleanup**: the Json columns (`Dictation.proposedPayload` / `editedPayload` / `usage`) and the string-enum columns (`intent` / `state` / `destination` / `captureMode`) are still typed as `String` for backward-compatibility with the existing `JSON.stringify` / `JSON.parse` code paths and Zod-based validation. Converting them to native `Json` / Postgres `enum` requires touching `DictationsService` plus every test that asserts on those shapes — a clean follow-up commit, not part of the migration itself.
+- ✅ **api-say schema-type cleanup**: `Dictation.{proposedPayload,editedPayload,usage}` are now native `Json`; `intent`/`state`/`destination`/`captureMode` are native Postgres `enum`s. `DictationsService` and `PendingService` no longer wrap reads/writes in `JSON.stringify`/`JSON.parse`; the awkward `DictationRow`/`hydrate()` indirection is gone and `DictationView` is just the Prisma `Dictation` type. Integration spec seed data updated to pass objects.
+- ✅ **`infra/docker-compose.dev.yml`**: local Postgres + Redis + Mailhog stack. `infra/postgres/init.sql` provisions the same per-app DB+role topology as `setupSuitePostgres` (six `<app>_owner` roles, six `things_<app>` DBs, plus `auth_reader` with `CONNECT` on `things_auth` and `ALTER DEFAULT PRIVILEGES FOR ROLE auth_owner ... GRANT SELECT` so that any future tables auth_owner creates auto-grant to auth_reader). Devs no longer need testcontainers to run the apps.
+
+**Still deferred to follow-up commits:**
+
 - **Cross-app E2E unskip**: `apps/api-say/__tests__/e2e/cross-app/say-to-do.e2e.spec.ts` is still `describe.skip`'d. With Postgres + per-app DBs in place the original blocker (shared Prisma client) is gone; wiring it up against a multi-app testcontainer (`apps: ['auth', 'do', 'say']`) is the unblocked next step.
 - **api-buy/api-eat/api-send integration tests**: these apps don't have integration tests yet, so they skipped `jest.integration.globalSetup.ts`. When the first one lands, copy the api-do template.
 - **Production migrations (`prisma migrate dev --name init`)**: tests use `prisma db push`. Production deploys will need real migration files generated against a Postgres instance and committed.
@@ -136,6 +140,5 @@ After all five apps are migrated:
 
 ## Out of scope (separate plans)
 
-- `infra/docker-compose.dev.yml` — local Postgres + Redis + Mailhog orchestration so devs don't need testcontainers to run the apps. Will use the same per-app DB/role provisioning via an init SQL script.
 - `infra/docker-compose.prod.yml`, `infra/Caddyfile`, per-app Dockerfiles, `.github/workflows/deploy.yml` — the rest of P5.
 - Migration files (Prisma migrate). The current workflow is `prisma db push`; production deploys will need real migrations generated via `prisma migrate dev --name init` after the schema lands. Tracked as a separate follow-up.
