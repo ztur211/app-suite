@@ -3142,7 +3142,7 @@ git commit -m "feat(eslint): ban provider SDK imports outside packages/ai/src/pr
 
 ### Task 13: Add `AiCall` Prisma model to `things_auth`
 
-The foundation spec says: "the AI module writes a row to `things_auth.ai_calls`." The `@things/ai` package itself only emits `UsageLogEntry` to an injected logger — consumer NestJS services own the actual DB write. To make that wiring straightforward, the `AiCall` table needs to exist in the canonical `things_auth` SQLite file (and be mirrored into any consumer app's Prisma schema, the same way `User`/`Session` are mirrored today).
+The foundation spec says: "the AI module writes a row to `things_auth.ai_calls`." The `@things/ai` package itself only emits `UsageLogEntry` to an injected logger — consumer NestJS services own the actual DB write. To make that wiring straightforward, the `AiCall` table needs to exist in the canonical `things_auth` Postgres database (and be mirrored into any consumer app's Prisma schema, the same way `User`/`Session` are mirrored today).
 
 This task adds the model only to `apps/api-auth/prisma/schema.prisma`. Mirroring into per-app schemas happens as part of each consumer app's plan, not this one.
 
@@ -3204,7 +3204,7 @@ ANTHROPIC_API_KEY=
 GOOGLE_API_KEY=
 ```
 
-- [ ] **Step 3: Apply the schema change to the dev SQLite file**
+- [ ] **Step 3: Apply the schema change to the dev Postgres database**
 
 ```powershell
 npm run db:push -w apps/api-auth

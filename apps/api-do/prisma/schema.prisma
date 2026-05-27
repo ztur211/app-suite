@@ -16,7 +16,8 @@ model Task {
   title     String
   completed Boolean   @default(false)
   dueAt     DateTime?
-  // JSON-encoded { app: string, dictationId?: string, ... } — SQLite has no Json type.
+  // JSON-encoded { app: string, dictationId?: string, ... }. Kept as String
+  // until the api-do Postgres migration switches it to native Json.
   source    String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

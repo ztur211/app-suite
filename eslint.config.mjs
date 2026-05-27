@@ -13,6 +13,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.expo/**',
       '**/node_modules/**',
+      '**/prisma/generated/**',
       '**/*.config.js',
       '**/*.config.cjs',
       'apps/**/*.config.mjs',

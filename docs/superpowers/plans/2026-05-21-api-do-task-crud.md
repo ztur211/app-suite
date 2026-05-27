@@ -2,11 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add Task CRUD endpoints (GET/POST/PATCH/DELETE /tasks) to `apps/api-do` backed by Prisma + SQLite, with session auth validated against the shared `things_auth.db`.
+> **P5 update (2026-05-27):** This plan originally specified a different dev backend, which P5 replaced with Postgres per the foundation spec. Schema/code snippets and tech-stack notes below have been updated to reflect the Postgres stack; the data-model and routing intent of the plan are unchanged. See `2026-05-27-postgres-migration.md` for the migration plan.
 
-**Architecture:** api-do gets its own Prisma schema that includes Task (the domain model) plus mirrored Better Auth tables (User/Session/Account/Verification) so one Prisma client can serve both tasks and session reads. The single SQLite file is `things_auth.db` from api-auth, so Tasks share the file with auth data in dev. A NestJS `SessionGuard` calls `auth.api.getSession()` to extract `userId` from the cookie on every protected route.
+**Goal:** Add Task CRUD endpoints (GET/POST/PATCH/DELETE /tasks) to `apps/api-do` backed by Prisma + Postgres, with session auth validated against the shared `things_auth` database.
 
-**Tech Stack:** NestJS 11, Prisma 5, SQLite (dev), Better Auth 1.x, TypeScript 5.6 strict, Jest 29 (unit + integration), supertest
+**Architecture:** api-do gets its own Prisma schema that includes Task (the domain model) plus mirrored Better Auth tables (User/Session/Account/Verification) so one Prisma client can serve both tasks and session reads. The mirrored tables let api-do read sessions without a cross-database query in dev; the `auth_reader` Postgres role on `things_auth` is the production read path. A NestJS `SessionGuard` calls `auth.api.getSession()` to extract `userId` from the cookie on every protected route.
+
+**Tech Stack:** NestJS 11, Prisma 5, Postgres 16 (via docker-compose.dev.yml in dev; testcontainers in tests), Better Auth 1.x, TypeScript 5.6 strict, Jest 29 (unit + integration), supertest
 
 ---
 
@@ -18,7 +20,7 @@
 | `apps/api-do/.env.example`                                 | Create | Document required env vars                                                 |
 | `apps/api-do/.env`                                         | Create | Real dev values (gitignored)                                               |
 | `apps/api-do/package.json`                                 | Modify | Add `@prisma/client`, `prisma`, `better-auth`, `cross-env`; add db scripts |
-| `apps/api-do/src/auth/auth.ts`                             | Create | `betterAuth()` instance pointing at `things_auth.db`                       |
+| `apps/api-do/src/auth/auth.ts`                             | Create | `betterAuth()` instance pointing at `things_auth`                          |
 | `apps/api-do/src/auth/session.guard.ts`                    | Create | NestJS guard that validates cookie → attaches `req.userId`                 |
 | `apps/api-do/src/auth/__tests__/session.guard.spec.ts`     | Create | Unit tests for SessionGuard                                                |
 | `apps/api-do/src/tasks/tasks.service.ts`                   | Create | Prisma-backed list/create/setCompleted/remove                              |
@@ -50,7 +52,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -69,7 +71,7 @@ model Task {
   @@index([userId, createdAt])
 }
 
-// ---- Mirrored from things_auth.db for Better Auth session validation ----
+// ---- Mirrored from things_auth for Better Auth session validation ----
 
 model User {
   id            String    @id @default(cuid())
@@ -131,7 +133,7 @@ model Verification {
 Create `apps/api-do/.env.example`:
 
 ```
-DATABASE_URL="file:../../apps/api-auth/things_auth.db"
+DATABASE_URL="postgresql://do_owner:do_owner@localhost:5432/things_do?schema=public"
 BETTER_AUTH_SECRET="<copy from apps/api-auth/.env — must match exactly>"
 PORT=3002
 ```
@@ -141,7 +143,7 @@ PORT=3002
 Create `apps/api-do/.env`:
 
 ```
-DATABASE_URL="file:../../apps/api-auth/things_auth.db"
+DATABASE_URL="postgresql://do_owner:do_owner@localhost:5432/things_do?schema=public"
 BETTER_AUTH_SECRET="dev-things-auth-secret-min-32-chars-long-abc"
 PORT=3002
 ```
@@ -191,7 +193,7 @@ npx prisma generate --schema=apps/api-do/prisma/schema.prisma
 npx prisma db push --schema=apps/api-do/prisma/schema.prisma --skip-generate
 ```
 
-Expected: `apps/api-auth/things_auth.db` is updated to include the `Task` table. The existing User/Session/Account/Verification tables already match — Prisma will see them as already-present.
+Expected: `apps/api-auth/things_auth` is updated to include the `Task` table. The existing User/Session/Account/Verification tables already match — Prisma will see them as already-present.
 
 - [ ] **Step 6: Commit**
 
@@ -217,12 +219,12 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { PrismaClient } from '@prisma/client';
 
-// This Prisma client connects to things_auth.db (the shared user DB),
+// This Prisma client connects to things_auth (the shared user DB),
 // which also contains the Task table. One DB, one client.
 export const prisma = new PrismaClient();
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, { provider: 'sqlite' }),
+  database: prismaAdapter(prisma, { provider: 'postgresql' }),
   emailAndPassword: { enabled: true },
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   secret: process.env['BETTER_AUTH_SECRET']!,
@@ -795,13 +797,13 @@ Create `apps/api-do/src/tasks/tasks.integration.spec.ts`:
 /**
  * Integration tests for the Tasks CRUD endpoints.
  *
- * Boots a real NestJS app against the real SQLite DB (things_auth.db).
+ * Boots a real NestJS app against the real Postgres DB (things_auth).
  * Inserts a test User + Session directly via Prisma to avoid needing api-auth running.
  * Cleans up after itself.
  *
  * Requires:
- *   - apps/api-do/.env with DATABASE_URL pointing at things_auth.db
- *   - apps/api-auth/things_auth.db to exist (run prisma db push first)
+ *   - apps/api-do/.env with DATABASE_URL pointing at things_auth
+ *   - apps/api-auth/things_auth to exist (run prisma db push first)
  */
 import 'reflect-metadata';
 import { INestApplication } from '@nestjs/common';
@@ -1055,7 +1057,7 @@ git commit -m "fix(api-do): address verification sweep findings"
 | Task must belong to user (setCompleted/remove) | Task 4 service tests cover NotFoundException on wrong user      |
 | Prisma schema — Task model                     | Task 1                                                          |
 | Prisma schema — Better Auth mirror tables      | Task 1                                                          |
-| Single SQLite file shared with api-auth        | Task 1 (.env, db push against api-auth's file)                  |
+| Single Postgres database shared with api-auth  | Task 1 (.env, db push against api-auth's file)                  |
 | `BETTER_AUTH_SECRET` must match api-auth       | Task 1 (.env)                                                   |
 
 ### Placeholder scan

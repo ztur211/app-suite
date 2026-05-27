@@ -10,14 +10,15 @@ datasource db {
 
 // ---- Things Say domain ----
 //
-// SQLite has no native enum/Json — we use String columns and validate at the
-// app layer (via Zod schemas in @things/types and intent/destination/state
-// enum re-exports below).
+// Enum-like columns are typed as String for now (validated at the app layer
+// via Zod schemas in @things/types). The api-say Postgres migration will
+// convert intent/destination/state/captureMode into native Postgres enums and
+// payload columns into native Json.
 //
 // Intent values:          DO, NOTE, SEND, BUY, EAT
 // DictationState values:  proposed, confirmed, dispatched, cancelled
 // Destination values:     DO_THINGS, SAY_LIBRARY, CLIPBOARD, PENDING_BUY, PENDING_EAT
-// CaptureMode values:     tap, drive
+// CaptureMode values:     tap, drive, type
 
 model Dictation {
   id                String    @id @default(cuid())

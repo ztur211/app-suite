@@ -1,8 +1,8 @@
 import type { Intent } from '@things/types';
 
 /**
- * String-typed destination labels (SQLite has no enum). Values are persisted
- * verbatim in `Dictation.destination`.
+ * Destination labels persisted verbatim in `Dictation.destination`. The
+ * api-say Postgres migration will switch this column to a native enum.
  */
 export type Destination = 'DO_THINGS' | 'SAY_LIBRARY' | 'CLIPBOARD' | 'PENDING_BUY' | 'PENDING_EAT';
 

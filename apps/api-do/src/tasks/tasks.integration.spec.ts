@@ -1,13 +1,14 @@
 /**
  * Integration tests for the Tasks CRUD endpoints.
  *
- * Boots a real NestJS app against the real SQLite DB (things_auth.db).
- * Signs up a test user via Better Auth's internal API to get a properly
- * signed session cookie. Cleans up after itself.
+ * Boots a real NestJS app against the api-do dev database. Signs up a test
+ * user via Better Auth's internal API to get a properly signed session
+ * cookie. Cleans up after itself.
  *
- * Requires:
- *   - apps/api-do/.env with DATABASE_URL pointing at things_auth.db
- *   - apps/api-auth/things_auth.db to exist (run prisma db push first)
+ * NOTE: This test still runs against the pre-migration database. When the
+ * api-do Postgres migration lands (see docs/superpowers/plans/2026-05-27-
+ * postgres-migration.md), this suite will switch to the @things/testing
+ * Postgres testcontainers helper, matching the api-auth pattern.
  */
 import 'reflect-metadata';
 import { INestApplication } from '@nestjs/common';

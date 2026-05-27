@@ -4,9 +4,9 @@
 
 **Goal:** Build the `apps/api-say` NestJS service end-to-end — record-then-classify pipeline, dispatch handlers (DO/NOTE/SEND/BUY/EAT), idempotency, reclassify, the inbound pending API for future Buy/Eat apps, and the intent-classification eval harness. Also lands the cross-app prerequisites (User.timezone column, api-do `source` field, Say-Things payload schemas, `@things/say-sdk` package).
 
-**Architecture:** Mirrors the api-do pattern — own Prisma schema with mirrored Better Auth tables pointing at the shared `things_auth.db`. NestJS modules: `auth/`, `idempotency/`, `dictations/`, `dispatch/`, `pending/`. AI calls go through `@things/ai` (interface only — implementation is P4, a separate plan that MUST land before this one executes). Cross-app `DO` dispatch calls `@things/do-sdk` with a signed service JWT. Inbound pending API is guarded by a `ServiceJwtGuard` whitelisting `api-buy` / `api-eat` as callers.
+**Architecture:** Mirrors the api-do pattern — own Prisma schema with mirrored Better Auth tables pointing at the shared `things_auth`. NestJS modules: `auth/`, `idempotency/`, `dictations/`, `dispatch/`, `pending/`. AI calls go through `@things/ai` (interface only — implementation is P4, a separate plan that MUST land before this one executes). Cross-app `DO` dispatch calls `@things/do-sdk` with a signed service JWT. Inbound pending API is guarded by a `ServiceJwtGuard` whitelisting `api-buy` / `api-eat` as callers.
 
-**Tech Stack:** NestJS 11, Prisma 5, SQLite (dev), Better Auth 1.x, multer (audio upload), TypeScript 5.6 strict, Jest 29 (unit + integration), supertest, @nestjs/schedule (cron), Zod (env + payload validation).
+**Tech Stack:** NestJS 11, Prisma 5, Postgres 16 (via docker-compose.dev.yml in dev; testcontainers in tests), Better Auth 1.x, multer (audio upload), TypeScript 5.6 strict, Jest 29 (unit + integration), supertest, @nestjs/schedule (cron), Zod (env + payload validation).
 
 **Spec:** `../../../project-ideas/docs/superpowers/specs/2026-05-22-say-things-design.md`
 
@@ -222,7 +222,7 @@ In `apps/api-do/prisma/schema.prisma`, modify the `User` model the same way as T
 - [ ] **Step 2: Generate the migration**
 
 Run: `npm -w apps/api-do exec prisma migrate dev --name user_timezone`
-Expected: Migration created; SQLite file picks up the new column.
+Expected: Migration created; Postgres database picks up the new column.
 
 - [ ] **Step 3: Run the api-do test suite**
 
@@ -1016,7 +1016,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -1099,7 +1099,7 @@ model IdempotencyKey {
   @@index([userId, endpoint, createdAt])
 }
 
-// ---- Mirrored from things_auth.db for session validation ----
+// ---- Mirrored from things_auth for session validation ----
 
 model User {
   id            String           @id @default(cuid())
@@ -1154,7 +1154,7 @@ model Verification {
 `apps/api-say/.env.example`:
 
 ```env
-DATABASE_URL="file:../api-auth/prisma/things_auth.db"
+DATABASE_URL="postgresql://say_owner:say_owner@localhost:5432/things_say?schema=public"
 PORT=3003
 BETTER_AUTH_SECRET="dev-secret-change-me"
 BETTER_AUTH_URL="http://localhost:3001"
@@ -1168,7 +1168,7 @@ TMP_AUDIO_DIR="./tmp"
 `apps/api-say/.env` (gitignored — fill with real dev values):
 
 ```env
-DATABASE_URL="file:../api-auth/prisma/things_auth.db"
+DATABASE_URL="postgresql://say_owner:say_owner@localhost:5432/things_say?schema=public"
 PORT=3003
 BETTER_AUTH_SECRET="dev-secret-change-me-locally"
 BETTER_AUTH_URL="http://localhost:3001"
@@ -1401,7 +1401,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 const prisma = new PrismaClient();
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, { provider: 'sqlite' }),
+  database: prismaAdapter(prisma, { provider: 'postgresql' }),
   basePath: '/auth',
   secret: process.env.BETTER_AUTH_SECRET!,
   baseURL: process.env.BETTER_AUTH_URL!,
@@ -2930,20 +2930,16 @@ describe('Dictations (integration)', () => {
   let prisma: PrismaService;
 
   const stubAi: jest.Mocked<AiClient> = {
-    transcribe: jest
-      .fn()
-      .mockResolvedValue({
-        text: 'remind me to call mum',
-        language: 'en',
-        segments: [],
-        usage: { elapsedMs: 100, costUsd: 0.001 },
-      }),
-    chatStructured: jest
-      .fn()
-      .mockResolvedValue({
-        value: { intent: 'DO', payload: { title: 'Call mum', dueAt: null }, confidence: 0.93 },
-        usage: { elapsedMs: 100, costUsd: 0.0005 },
-      }),
+    transcribe: jest.fn().mockResolvedValue({
+      text: 'remind me to call mum',
+      language: 'en',
+      segments: [],
+      usage: { elapsedMs: 100, costUsd: 0.001 },
+    }),
+    chatStructured: jest.fn().mockResolvedValue({
+      value: { intent: 'DO', payload: { title: 'Call mum', dueAt: null }, confidence: 0.93 },
+      usage: { elapsedMs: 100, costUsd: 0.0005 },
+    }),
   } as never;
 
   beforeAll(async () => {
@@ -3733,20 +3729,16 @@ describe('Cross-app: Say → Do (e2e contract)', () => {
   const userId = 'u-x';
 
   const stubAi: jest.Mocked<AiClient> = {
-    transcribe: jest
-      .fn()
-      .mockResolvedValue({
-        text: 'remind me to call mum',
-        language: 'en',
-        segments: [],
-        usage: { elapsedMs: 100, costUsd: 0 },
-      }),
-    chatStructured: jest
-      .fn()
-      .mockResolvedValue({
-        value: { intent: 'DO', payload: { title: 'Call mum', dueAt: null }, confidence: 0.94 },
-        usage: { elapsedMs: 100, costUsd: 0 },
-      }),
+    transcribe: jest.fn().mockResolvedValue({
+      text: 'remind me to call mum',
+      language: 'en',
+      segments: [],
+      usage: { elapsedMs: 100, costUsd: 0 },
+    }),
+    chatStructured: jest.fn().mockResolvedValue({
+      value: { intent: 'DO', payload: { title: 'Call mum', dueAt: null }, confidence: 0.94 },
+      usage: { elapsedMs: 100, costUsd: 0 },
+    }),
   } as never;
 
   beforeAll(async () => {

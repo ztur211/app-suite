@@ -1,9 +1,10 @@
 /**
  * Integration test for the Better Auth endpoints.
  *
- * Boots a real NestJS app against the SQLite dev DB (things_auth.db).
- * Requires the DB to be created (prisma db push) before running.
- * The test cleans up the user it creates to avoid cross-run pollution.
+ * Boots a real NestJS app against a Postgres testcontainer (provisioned in
+ * jest.integration.globalSetup.ts, which also runs `prisma db push` to
+ * materialize the schema). The test cleans up the user it creates so it can
+ * be re-run idempotently within the same container.
  */
 import 'reflect-metadata';
 import { INestApplication } from '@nestjs/common';
