@@ -5,7 +5,12 @@ const config: Config = {
   setupFiles: ['<rootDir>/jest.setup.ts'],
   rootDir: 'src',
   testRegex: '.*\\.(test|spec)\\.(ts|tsx)$',
-  testPathIgnorePatterns: ['/node_modules/', '/.expo/'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/.expo/',
+    '\\.integration\\.spec\\.(ts|tsx)$',
+    '\\.e2e\\.spec\\.(ts|tsx)$',
+  ],
   transformIgnorePatterns: [
     'node_modules/(?!(jest-)?react-native|@react-native|@react-navigation|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-native-svg|react-native-safe-area-context|react-native-screens|nativewind|react-native-reanimated)',
   ],
