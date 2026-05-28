@@ -20,6 +20,7 @@ const config: Config = {
     '/node_modules/(?!(better-auth|better-call|@better-fetch|@better-auth|@noble|jose|nanoid|rou3|uncrypto|defu|destr|hookable|ufo|ohash|radix3|h3|cookie-es|iron-webcrypto|klona)/).*',
   ],
   testTimeout: 120000,
+  globalSetup: '<rootDir>/jest.e2e.globalSetup.ts',
 };
 
 export default config;

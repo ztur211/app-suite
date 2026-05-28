@@ -8,7 +8,10 @@ import { TasksService } from './tasks.service';
   providers: [
     {
       provide: PrismaClient,
-      useFactory: () => new PrismaClient(),
+      useFactory: () =>
+        new PrismaClient({
+          datasources: { db: { url: process.env['DATABASE_URL'] } },
+        }),
     },
     TasksService,
   ],
