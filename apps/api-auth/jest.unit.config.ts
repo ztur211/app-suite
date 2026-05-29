@@ -1,23 +1,27 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  moduleFileExtensions: ['js', 'mjs', 'json', 'ts'],
+  testEnvironment: 'node',
   rootDir: 'src',
   testRegex: '.*(?<!integration)\\.spec\\.ts$',
+  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+  moduleFileExtensions: ['ts', 'tsx', 'mjs', 'js', 'jsx', 'json'],
+  collectCoverageFrom: ['**/*.ts', '!**/*.module.ts', '!**/main.ts', '!**/*.d.ts'],
+  coverageDirectory: '../coverage/unit',
   transform: {
-    '^.+\\.(t|j|mj)s$': [
-      'ts-jest',
+    '^.+\\.(t|j|mj|cj)sx?$': [
+      '@swc/jest',
       {
-        useESM: true,
-        tsconfig: '<rootDir>/../tsconfig.jest.json',
+        jsc: {
+          parser: { syntax: 'typescript', decorators: true },
+          transform: { legacyDecorator: true, decoratorMetadata: true },
+          target: 'es2022',
+          keepClassNames: true,
+        },
+        module: { type: 'commonjs' },
       },
     ],
   },
-  extensionsToTreatAsEsm: ['.ts'],
-  collectCoverageFrom: ['**/*.ts', '!**/*.module.ts', '!**/main.ts', '!**/*.d.ts'],
-  coverageDirectory: '../coverage/unit',
-  testEnvironment: 'node',
-  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   transformIgnorePatterns: [
     '/node_modules/(?!(better-auth|better-call|@better-fetch|@better-auth)/)',
   ],
