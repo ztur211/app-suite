@@ -143,5 +143,5 @@ File was gitignored (`*.db`) so the cleanup is a local-disk delete; the `apps/ap
 
 ## Out of scope (separate plans)
 
-- `infra/docker-compose.prod.yml`, `infra/Caddyfile`, per-app Dockerfiles, `.github/workflows/deploy.yml` — the rest of P5.
+- `infra/docker-compose.prod.yml`, `infra/Caddyfile`, per-app Dockerfiles, `.github/workflows/deploy.yml` — the rest of P5. ✅ Shipped — see `infra/README.md`. The prod stack (Caddy auto-TLS + 6 api + 5 web + postgres + redis), shared parameterized `api`/`web` Dockerfiles, `init-prod.sh` (env-driven role/DB topology), GHCR build+SSH deploy workflow, `scripts/{deploy.sh,smoke.mjs}`, and nightly `pg_dump` backups all landed. Validated via `docker compose config`, `caddy validate`, `actionlint`, and a host-side build-order + `prisma generate` check; the full in-image `npm ci` build runs in CI (`pull-request.yml` already proves it on `ubuntu-latest`) but couldn't be executed in the dev sandbox (build-container egress to the npm registry is proxied/blocked).
 - Migration files (Prisma migrate). ✅ Shipped — see the "Production migration files generated + committed" entry under Shipped follow-ups above. Tests still use `prisma db push`; production uses the committed `_init` migrations via `db:migrate:deploy`.

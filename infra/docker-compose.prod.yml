@@ -1,0 +1,283 @@
+# Production stack for the Things suite — single VPS, per foundation spec §6.
+#
+# Only Caddy is exposed to the internet (80/443). Every API, web, Postgres and
+# Redis container is reachable solely on the internal `things` network; Caddy
+# reverse-proxies the public subdomains to them and terminates TLS.
+#
+# Images are pulled from GHCR (built + pushed by .github/workflows/deploy.yml).
+# Secrets/config come from an env file next to this compose file (infra/.env on
+# the VPS — gitignored; see .env.example). Service-to-service traffic uses
+# internal DNS names (e.g. http://api-do:3002), never the public URLs.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d
+#   docker compose -f docker-compose.prod.yml --env-file .env pull api-do
+#
+# All Postgres databases share one instance; each app owns its own DB + role,
+# and a read-only auth_reader role lets the five domain apps validate sessions
+# against things_auth (foundation spec §3.5).
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
+# Shared scaffolding for every API service.
+x-api-defaults: &api-defaults
+  restart: unless-stopped
+  networks: [things]
+  logging: *default-logging
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: things-caddy
+    restart: unless-stopped
+    networks: [things]
+    logging: *default-logging
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+    environment:
+      THINGS_DOMAIN: ${THINGS_DOMAIN:?set THINGS_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api-auth
+      - api-do
+      - api-say
+      - api-buy
+      - api-eat
+      - api-send
+      - web-do
+      - web-say
+      - web-buy
+      - web-eat
+      - web-send
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: things-postgres
+    restart: unless-stopped
+    networks: [things]
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      # Consumed by init-prod.sh to create per-app roles with real passwords.
+      AUTH_OWNER_PASSWORD: ${AUTH_OWNER_PASSWORD:?set AUTH_OWNER_PASSWORD}
+      DO_OWNER_PASSWORD: ${DO_OWNER_PASSWORD:?set DO_OWNER_PASSWORD}
+      SAY_OWNER_PASSWORD: ${SAY_OWNER_PASSWORD:?set SAY_OWNER_PASSWORD}
+      BUY_OWNER_PASSWORD: ${BUY_OWNER_PASSWORD:?set BUY_OWNER_PASSWORD}
+      EAT_OWNER_PASSWORD: ${EAT_OWNER_PASSWORD:?set EAT_OWNER_PASSWORD}
+      SEND_OWNER_PASSWORD: ${SEND_OWNER_PASSWORD:?set SEND_OWNER_PASSWORD}
+      AUTH_READER_PASSWORD: ${AUTH_READER_PASSWORD:?set AUTH_READER_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init-prod.sh:/docker-entrypoint-initdb.d/init-prod.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: things-redis
+    restart: unless-stopped
+    networks: [things]
+    logging: *default-logging
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---- API services ----
+  api-auth:
+    <<: *api-defaults
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-api-auth:${TAG:-latest}
+    container_name: things-api-auth
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://auth_owner:${AUTH_OWNER_PASSWORD}@postgres:5432/things_auth?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: https://auth.${THINGS_DOMAIN}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  api-do:
+    <<: *api-defaults
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-api-do:${TAG:-latest}
+    container_name: things-api-do
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgresql://do_owner:${DO_OWNER_PASSWORD}@postgres:5432/things_do?schema=public
+      AUTH_DATABASE_URL: postgresql://auth_reader:${AUTH_READER_PASSWORD}@postgres:5432/things_auth?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: https://api.do.${THINGS_DOMAIN}
+      SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET:?set SERVICE_TOKEN_SECRET}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3002/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  api-say:
+    <<: *api-defaults
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-api-say:${TAG:-latest}
+    container_name: things-api-say
+    environment:
+      PORT: 3003
+      DATABASE_URL: postgresql://say_owner:${SAY_OWNER_PASSWORD}@postgres:5432/things_say?schema=public
+      AUTH_DATABASE_URL: postgresql://auth_reader:${AUTH_READER_PASSWORD}@postgres:5432/things_auth?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: https://api.say.${THINGS_DOMAIN}
+      SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET}
+      DO_API_URL: http://api-do:3002
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY}
+      TMP_AUDIO_DIR: /tmp/things-say-audio
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3003/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  api-buy:
+    <<: *api-defaults
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-api-buy:${TAG:-latest}
+    container_name: things-api-buy
+    environment:
+      PORT: 3004
+      DATABASE_URL: postgresql://buy_owner:${BUY_OWNER_PASSWORD}@postgres:5432/things_buy?schema=public
+      AUTH_DATABASE_URL: postgresql://auth_reader:${AUTH_READER_PASSWORD}@postgres:5432/things_auth?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: https://api.buy.${THINGS_DOMAIN}
+      SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET}
+      SAY_API_URL: http://api-say:3003
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3004/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  api-eat:
+    <<: *api-defaults
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-api-eat:${TAG:-latest}
+    container_name: things-api-eat
+    environment:
+      PORT: 3005
+      DATABASE_URL: postgresql://eat_owner:${EAT_OWNER_PASSWORD}@postgres:5432/things_eat?schema=public
+      AUTH_DATABASE_URL: postgresql://auth_reader:${AUTH_READER_PASSWORD}@postgres:5432/things_auth?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: https://api.eat.${THINGS_DOMAIN}
+      SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET}
+      SAY_API_URL: http://api-say:3003
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3005/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  api-send:
+    <<: *api-defaults
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-api-send:${TAG:-latest}
+    container_name: things-api-send
+    environment:
+      PORT: 3006
+      DATABASE_URL: postgresql://send_owner:${SEND_OWNER_PASSWORD}@postgres:5432/things_send?schema=public
+      AUTH_DATABASE_URL: postgresql://auth_reader:${AUTH_READER_PASSWORD}@postgres:5432/things_auth?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: https://api.send.${THINGS_DOMAIN}
+      SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3006/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  # ---- Web services (static nginx) ----
+  web-do:
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-web-do:${TAG:-latest}
+    container_name: things-web-do
+    restart: unless-stopped
+    networks: [things]
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  web-say:
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-web-say:${TAG:-latest}
+    container_name: things-web-say
+    restart: unless-stopped
+    networks: [things]
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  web-buy:
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-web-buy:${TAG:-latest}
+    container_name: things-web-buy
+    restart: unless-stopped
+    networks: [things]
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  web-eat:
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-web-eat:${TAG:-latest}
+    container_name: things-web-eat
+    restart: unless-stopped
+    networks: [things]
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  web-send:
+    image: ${REGISTRY:-ghcr.io/ztur211}/things-web-send:${TAG:-latest}
+    container_name: things-web-send
+    restart: unless-stopped
+    networks: [things]
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+networks:
+  things:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

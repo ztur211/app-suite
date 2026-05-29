@@ -1,0 +1,127 @@
+name: Deploy
+
+# Runs after merge to main. Trusts the PR gate (pull-request.yml already ran
+# lint + typecheck + unit + integration + build), so it does NOT re-run tests.
+# It builds every service image, pushes to GHCR, then SSHes to the VPS to pull
+# and restart the stack, and finally smoke-tests the live endpoints.
+# (Foundation spec §6.4.)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-apis:
+    name: Build API image (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api-auth, api-do, api-say, api-buy, api-eat, api-send]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          build-args: APP=${{ matrix.app }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/things-${{ matrix.app }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/things-${{ matrix.app }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max
+
+  build-webs:
+    name: Build web image (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [web-do, web-say, web-buy, web-eat, web-send]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # EXPO_PUBLIC_* values are baked into the static bundle at build time.
+      # THINGS_DOMAIN is a repo variable (Settings → Variables), e.g. things.app.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/web.Dockerfile
+          push: true
+          build-args: |
+            APP=${{ matrix.app }}
+            EXPO_PUBLIC_AUTH_URL=https://auth.${{ vars.THINGS_DOMAIN }}
+            EXPO_PUBLIC_DO_URL=https://api.do.${{ vars.THINGS_DOMAIN }}
+            EXPO_PUBLIC_SAY_URL=https://api.say.${{ vars.THINGS_DOMAIN }}
+            EXPO_PUBLIC_BUY_URL=https://api.buy.${{ vars.THINGS_DOMAIN }}
+            EXPO_PUBLIC_EAT_URL=https://api.eat.${{ vars.THINGS_DOMAIN }}
+            EXPO_PUBLIC_SEND_URL=https://api.send.${{ vars.THINGS_DOMAIN }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/things-${{ matrix.app }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/things-${{ matrix.app }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max
+
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: [build-apis, build-webs]
+    steps:
+      - name: Pull images and restart the stack over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/things
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            export TAG=${{ github.sha }}
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env pull
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env up -d
+            docker image prune -f
+
+  smoke:
+    name: Smoke test live endpoints
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Hit every /health and /healthz
+        env:
+          THINGS_DOMAIN: ${{ vars.THINGS_DOMAIN }}
+        run: node scripts/smoke.mjs

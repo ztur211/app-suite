@@ -1,0 +1,87 @@
+# Reverse proxy + automatic TLS for the whole Things suite (foundation spec §6.3).
+#
+# THINGS_DOMAIN and ACME_EMAIL are injected as env vars by docker-compose.prod.yml.
+# Each subdomain gets its own Let's Encrypt certificate via the HTTP-01/TLS-ALPN
+# challenge — works with the stock caddy:2-alpine image and needs no DNS plugin.
+#
+# NOTE: the spec's preferred end state is a single *.things.app WILDCARD cert via
+# the DNS-01 challenge. That requires a Caddy binary built with the DNS-provider
+# plugin (xcaddy build --with github.com/caddy-dns/<provider>) and a tls block:
+#     tls {$ACME_EMAIL} {
+#         dns <provider> {$DNS_API_TOKEN}
+#     }
+# Swap the per-site auto-TLS below for that once the registrar/DNS is chosen
+# (open question in spec §12). The routing topology is unchanged either way.
+{
+	email {$ACME_EMAIL}
+	# Uncomment for local/staging dry-runs to avoid Let's Encrypt rate limits:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# --- Shared snippets ---------------------------------------------------------
+(secure_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+(api_proxy) {
+	import secure_headers
+	reverse_proxy {args[0]} {
+		health_uri /health
+		health_interval 30s
+		health_timeout 5s
+	}
+}
+
+(web_proxy) {
+	import secure_headers
+	encode zstd gzip
+	reverse_proxy {args[0]} {
+		health_uri /healthz
+		health_interval 30s
+		health_timeout 5s
+	}
+}
+
+# --- Auth service (login/signup/reset/verify pages) --------------------------
+auth.{$THINGS_DOMAIN} {
+	import api_proxy api-auth:3001
+}
+
+# --- Per-app NestJS APIs -----------------------------------------------------
+api.do.{$THINGS_DOMAIN} {
+	import api_proxy api-do:3002
+}
+api.say.{$THINGS_DOMAIN} {
+	import api_proxy api-say:3003
+}
+api.buy.{$THINGS_DOMAIN} {
+	import api_proxy api-buy:3004
+}
+api.eat.{$THINGS_DOMAIN} {
+	import api_proxy api-eat:3005
+}
+api.send.{$THINGS_DOMAIN} {
+	import api_proxy api-send:3006
+}
+
+# --- Per-app Expo web builds (static, served by nginx) -----------------------
+do.{$THINGS_DOMAIN} {
+	import web_proxy web-do:80
+}
+say.{$THINGS_DOMAIN} {
+	import web_proxy web-say:80
+}
+buy.{$THINGS_DOMAIN} {
+	import web_proxy web-buy:80
+}
+eat.{$THINGS_DOMAIN} {
+	import web_proxy web-eat:80
+}
+send.{$THINGS_DOMAIN} {
+	import web_proxy web-send:80
+}
