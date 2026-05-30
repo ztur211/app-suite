@@ -12,13 +12,16 @@ export const prisma = new PrismaClient();
 // session/user data; sign-up flows live in api-auth.
 export const authPrisma = new AuthPrismaClient();
 
+// Expo dev servers bind 8081 upward; trust the first five for side-by-side apps.
+const devWebOrigins = Array.from({ length: 5 }, (_, i) => `http://localhost:${8081 + i}`);
+
 export const auth = betterAuth({
   database: prismaAdapter(authPrisma, { provider: 'postgresql' }),
   emailAndPassword: { enabled: true },
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   secret: process.env['BETTER_AUTH_SECRET']!,
   basePath: '/auth',
-  trustedOrigins: ['http://localhost:3002', 'http://localhost:8081'],
+  trustedOrigins: ['http://localhost:3002', ...devWebOrigins],
 });
 
 export type Auth = typeof auth;
