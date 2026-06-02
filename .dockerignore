@@ -1,0 +1,32 @@
+# Keep the Docker build context lean and force a clean in-image build.
+# Everything below is regenerated inside the image (npm ci, prisma generate,
+# nest build / expo export), so shipping host copies would only risk staleness
+# and arch mismatch.
+# Exclude node_modules everywhere — both the top-level workspace install and
+# nested ones. The host copy is built on OneDrive (Windows-backed) and bleeds
+# broken bin-links into the image if shipped, so we force a clean `npm ci`.
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.expo
+**/.next
+**/generated
+**/coverage
+**/.tsbuildinfo
+**/*.tsbuildinfo
+.git
+.github
+**/*.db
+**/*.db-journal
+**/*.db-wal
+**/*.db-shm
+
+# Secrets must never enter an image layer.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Editor / OS noise
+**/.DS_Store
+Thumbs.db

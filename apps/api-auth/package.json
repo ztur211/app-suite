@@ -15,7 +15,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:generate": "prisma generate",
     "db:push": "prisma db push --skip-generate",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -23,6 +24,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@prisma/client": "^5.22.0",
     "better-auth": "^1.6.11",
+    "dotenv": "^16.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

@@ -13,6 +13,9 @@ export const prisma = new PrismaClient();
 // session/user data; sign-up flows live in api-auth.
 export const authPrisma = new AuthPrismaClient();
 
+// Expo dev servers bind 8081 upward; trust the first five for side-by-side apps.
+const devWebOrigins = Array.from({ length: 5 }, (_, i) => `http://localhost:${8081 + i}`);
+
 export const auth = betterAuth({
   database: prismaAdapter(authPrisma, { provider: 'postgresql' }),
   emailAndPassword: { enabled: true },
@@ -20,10 +23,7 @@ export const auth = betterAuth({
   secret: process.env['BETTER_AUTH_SECRET']!,
   baseURL: process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3003',
   basePath: '/auth',
-  trustedOrigins: [
-    process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3003',
-    'http://localhost:8081',
-  ],
+  trustedOrigins: [process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3003', ...devWebOrigins],
   user: {
     additionalFields: {
       timezone: {

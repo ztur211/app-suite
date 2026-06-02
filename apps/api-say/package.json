@@ -16,6 +16,7 @@
     "db:generate": "prisma generate --schema=prisma/schema.prisma && prisma generate --schema=prisma/auth-schema.prisma",
     "db:push": "prisma db push --skip-generate --schema=prisma/schema.prisma",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
     "eval:intent": "ts-node __tests__/eval/intent-classification/run-eval.ts"
   },
   "dependencies": {
@@ -29,6 +30,7 @@
     "@things/do-sdk": "*",
     "@things/types": "*",
     "better-auth": "^1.6.11",
+    "dotenv": "^16.4.0",
     "luxon": "^3.5.0",
     "multer": "^1.4.5-lts.1",
     "reflect-metadata": "^0.2.2",
