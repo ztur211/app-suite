@@ -13,6 +13,9 @@ npm run test:unit
 npm run build
 ```
 
+To bring the whole suite up locally and click through it in a browser, see
+[`LOCAL-DEV.md`](./LOCAL-DEV.md).
+
 ## Workspaces
 
 - `apps/api-auth` — auth service (Better Auth login/signup/reset pages)

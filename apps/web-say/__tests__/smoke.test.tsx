@@ -1,9 +1,10 @@
 import { render } from '@testing-library/react-native';
-import Index from '../app/index';
+import Login from '../app/(auth)/login';
 
-describe('web-say Index screen', () => {
-  it('renders the "Say Things" wordmark', () => {
-    const { getByText } = render(<Index />);
+describe('web-say login screen', () => {
+  it('renders the "Say Things" wordmark and a submit button', () => {
+    const { getByText, getByTestId } = render(<Login />);
     expect(getByText('Say Things')).toBeTruthy();
+    expect(getByTestId('login-submit')).toBeTruthy();
   });
 });
