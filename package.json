@@ -10,10 +10,12 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rimraf node_modules",
+    "db:generate": "npm run db:generate --workspaces --if-present",
     "dev": "echo 'Use a workspace-specific dev script, e.g. `npm run dev -w apps/api-auth`'",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "lint": "eslint . && npm run lint --workspaces --if-present",
+    "postinstall": "npm run db:generate",
     "prepare": "husky",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:unit --workspaces --if-present",

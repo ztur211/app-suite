@@ -29,9 +29,11 @@
 
 - ✅ **Production migration files generated + committed.** Every owned schema now has an `_init` migration under `apps/<app>/prisma/migrations/`: api-auth (`User`/`Session`/`Account`/`Verification`/`AiCall` in things_auth) and the five domain schemas (api-do `Task`, api-buy `ShoppingItem`, api-eat `MealItem`, api-say `Dictation` + 4 enums + `IdempotencyKey` + mirrored `AiCall`, api-send `Message`). Generated via `prisma migrate dev --name init` against a throwaway Postgres; each verified drift-free with `prisma migrate diff --from-migrations … --to-schema-datamodel … --exit-code` (all exit 0) and the deploy path dogfooded via `prisma migrate deploy` into a fresh DB. The read-only `auth-schema.prisma` mirrors in the five non-auth apps get **no** migrations — api-auth owns the auth tables; the others only read them via `auth_reader`. Each app gained `db:migrate` (dev) and `db:migrate:deploy` (prod) scripts.
 
+- ✅ **CI migration-drift guard.** `pull-request.yml` gained a `migration-drift` job: a `postgres:16-alpine` service supplies a throwaway shadow DB (`POSTGRES_DB: shadow`), and the job replays each owned schema's committed migrations into it and diffs against `schema.prisma` per app via `prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url … --exit-code`, failing the build (with a `npm run db:migrate -w apps/<app>` remediation hint) on any difference. This closes the gap left by integration tests using `prisma db push` instead of the migration history. Verified against an embedded Postgres 16 running the workflow's exact run-block: all six apps drift-free (exit 0), and an unmigrated `Task` column edit caught (`prisma` exit 2 → job exit 1).
+
 **Still deferred to follow-up commits:**
 
-- **CI drift-guard (optional, non-blocking):** integration tests still use `prisma db push` (faster cold start), so a schema edit that skips generating a matching migration would not fail tests. A CI step running `prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --exit-code` per app (with a throwaway shadow DB) would catch migration↔schema drift before deploy.
+- _None — the CI migration-drift guard above was the last deferred item from this plan._
 
 **Tech Stack:** Postgres 16 (image `postgres:16-alpine`), Prisma 5.22, Better Auth 1.6+, testcontainers 12, NestJS 11, Jest 29.
 

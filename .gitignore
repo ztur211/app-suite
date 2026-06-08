@@ -52,3 +52,6 @@ android/
 
 # Husky internals
 .husky/_/
+
+# Local Docker install helper (downloaded from get.docker.com; not part of the repo)
+get-docker.sh
