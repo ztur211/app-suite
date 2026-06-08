@@ -10,6 +10,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rimraf node_modules",
+    "db:generate": "npm run db:generate --workspaces --if-present",
     "dev": "echo 'Use a workspace-specific dev script, e.g. `npm run dev -w apps/api-auth`'",
     "dev:db": "docker compose -f infra/docker-compose.dev.yml up -d postgres",
     "dev:api": "concurrently -k -n auth,do,say,buy,eat,send -c blue,green,magenta,cyan,yellow,gray \"npm run dev -w apps/api-auth\" \"npm run dev -w apps/api-do\" \"npm run dev -w apps/api-say\" \"npm run dev -w apps/api-buy\" \"npm run dev -w apps/api-eat\" \"npm run dev -w apps/api-send\"",
@@ -17,6 +18,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "lint": "eslint . && npm run lint --workspaces --if-present",
+    "postinstall": "npm run db:generate",
     "prepare": "husky",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:unit --workspaces --if-present",
