@@ -24,6 +24,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The @things/* packages resolve via their built dist/ (package main/types),
+      # not from source — so nothing downstream (lint/typecheck/test/build) can
+      # resolve them until they're compiled, exactly as the Docker images build
+      # them first. A fresh checkout has no dist/ or .tsbuildinfo, so this emits
+      # cleanly in topological order.
+      - name: Build shared packages
+        run: npm run build:packages
+
       - name: Lint
         run: npm run lint
 
