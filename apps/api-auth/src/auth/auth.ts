@@ -5,6 +5,8 @@ import { PrismaClient } from '../../prisma/generated/client';
 
 export const prisma = new PrismaClient();
 
+const cookieDomain = authCookieDomain();
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
   emailAndPassword: { enabled: true },
@@ -17,8 +19,8 @@ export const auth = betterAuth({
     process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3001',
     ...trustedWebOrigins(),
   ],
-  ...(authCookieDomain()
-    ? { advanced: { crossSubDomainCookies: { enabled: true, domain: authCookieDomain()! } } }
+  ...(cookieDomain
+    ? { advanced: { crossSubDomainCookies: { enabled: true, domain: cookieDomain } } }
     : {}),
   user: {
     additionalFields: {

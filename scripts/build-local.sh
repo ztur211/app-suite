@@ -8,7 +8,7 @@ set -a; . "${ROOT}/infra/.env"; set +a
 : "${THINGS_DOMAIN:?set THINGS_DOMAIN in infra/.env}"
 REGISTRY="${REGISTRY:-ghcr.io/ztur211}"
 TAG="${TAG:-latest}"
-SCHEME="https"
+SCHEME="${SCHEME:-https}"
 
 API_APPS=(api-auth api-do api-say api-buy api-eat api-send)
 WEB_APPS=(web-do web-say web-buy web-eat web-send)
