@@ -9,3 +9,5 @@ export {
 } from './service-jwt';
 
 export { validateSessionFromCookie, type AuthApiLike, type SessionInfo } from './session-validator';
+
+export { trustedWebOrigins, authCookieDomain } from './origins';
