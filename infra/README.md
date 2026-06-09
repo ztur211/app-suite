@@ -42,6 +42,20 @@ and pushed to GHCR. Service-to-service calls use internal docker DNS
    ```
 4. Add the backup cron (see `backup/README.md`) and run the restore drill once.
 
+## Local single-machine deploy (no cloud)
+
+Run the whole stack on one Linux box, reachable in a browser on that machine.
+
+1. `/etc/hosts`:
+   `127.0.0.1  auth.things.test api.do.things.test api.say.things.test api.buy.things.test api.eat.things.test api.send.things.test do.things.test say.things.test buy.things.test eat.things.test send.things.test`
+2. `cp infra/.env.example infra/.env && chmod 600 infra/.env`; set `THINGS_DOMAIN=things.test`,
+   `AUTH_COOKIE_DOMAIN=.things.test`, `CADDY_EXTRA_GLOBAL=local_certs`, and generate the
+   passwords/secrets (`openssl rand -base64 36`). `OPENAI_/ANTHROPIC_KEY` are optional.
+3. `scripts/build-local.sh`
+4. `docker compose -f infra/docker-compose.prod.yml -f infra/docker-compose.local.yml --env-file infra/.env up -d`
+5. Trust Caddy's local CA: `docker compose ... cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-local-ca.crt`,
+   then add it to your browser/system trust store. Open `https://do.things.test`.
+
 ## Deploys
 
 Automatic on merge to `main` (build → GHCR → SSH → `compose up` → smoke). Manual
