@@ -114,6 +114,8 @@ services:
       DATABASE_URL: postgresql://auth_owner:${AUTH_OWNER_PASSWORD}@postgres:5432/things_auth?schema=public
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: https://auth.${THINGS_DOMAIN}
+      THINGS_DOMAIN: ${THINGS_DOMAIN}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/health']
       interval: 30s
@@ -131,6 +133,8 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: https://api.do.${THINGS_DOMAIN}
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET:?set SERVICE_TOKEN_SECRET}
+      THINGS_DOMAIN: ${THINGS_DOMAIN}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3002/health']
       interval: 30s
@@ -152,6 +156,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY}
       TMP_AUDIO_DIR: /tmp/things-say-audio
+      THINGS_DOMAIN: ${THINGS_DOMAIN}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3003/health']
       interval: 30s
@@ -170,6 +176,8 @@ services:
       BETTER_AUTH_URL: https://api.buy.${THINGS_DOMAIN}
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET}
       SAY_API_URL: http://api-say:3003
+      THINGS_DOMAIN: ${THINGS_DOMAIN}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3004/health']
       interval: 30s
@@ -188,6 +196,8 @@ services:
       BETTER_AUTH_URL: https://api.eat.${THINGS_DOMAIN}
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET}
       SAY_API_URL: http://api-say:3003
+      THINGS_DOMAIN: ${THINGS_DOMAIN}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3005/health']
       interval: 30s
@@ -205,6 +215,8 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: https://api.send.${THINGS_DOMAIN}
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET}
+      THINGS_DOMAIN: ${THINGS_DOMAIN}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3006/health']
       interval: 30s

@@ -19,6 +19,7 @@
     "db:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
+    "@things/auth": "*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.1.21",
     "@nestjs/platform-express": "^11.0.0",

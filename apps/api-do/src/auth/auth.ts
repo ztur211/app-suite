@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { trustedWebOrigins, authCookieDomain } from '@things/auth';
 import { PrismaClient } from '../../prisma/generated/client';
 import { PrismaClient as AuthPrismaClient } from '../../prisma/generated/auth-client';
 
@@ -12,8 +13,7 @@ export const prisma = new PrismaClient();
 // session/user data; sign-up flows live in api-auth.
 export const authPrisma = new AuthPrismaClient();
 
-// Expo dev servers bind 8081 upward; trust the first five for side-by-side apps.
-const devWebOrigins = Array.from({ length: 5 }, (_, i) => `http://localhost:${8081 + i}`);
+const cookieDomain = authCookieDomain();
 
 export const auth = betterAuth({
   database: prismaAdapter(authPrisma, { provider: 'postgresql' }),
@@ -21,7 +21,13 @@ export const auth = betterAuth({
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   secret: process.env['BETTER_AUTH_SECRET']!,
   basePath: '/auth',
-  trustedOrigins: ['http://localhost:3002', ...devWebOrigins],
+  trustedOrigins: [
+    process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3002',
+    ...trustedWebOrigins(),
+  ],
+  ...(cookieDomain
+    ? { advanced: { crossSubDomainCookies: { enabled: true, domain: cookieDomain } } }
+    : {}),
 });
 
 export type Auth = typeof auth;

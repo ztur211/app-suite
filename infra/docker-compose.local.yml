@@ -1,0 +1,20 @@
+# Local single-machine deploy overlay. Use WITH the prod compose:
+#   docker compose -f infra/docker-compose.prod.yml -f infra/docker-compose.local.yml \
+#     --env-file infra/.env up -d
+# Differences from prod: use locally-built images (never pull GHCR) and serve
+# every subdomain through Caddy's internal CA instead of Let's Encrypt.
+services:
+  caddy:
+    environment:
+      CADDY_EXTRA_GLOBAL: local_certs
+  api-auth: { pull_policy: never }
+  api-do: { pull_policy: never }
+  api-say: { pull_policy: never }
+  api-buy: { pull_policy: never }
+  api-eat: { pull_policy: never }
+  api-send: { pull_policy: never }
+  web-do: { pull_policy: never }
+  web-say: { pull_policy: never }
+  web-buy: { pull_policy: never }
+  web-eat: { pull_policy: never }
+  web-send: { pull_policy: never }
