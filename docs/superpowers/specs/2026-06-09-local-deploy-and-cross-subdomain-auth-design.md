@@ -148,7 +148,7 @@ Document `AUTH_COOKIE_DOMAIN` in `infra/.env.example` (`.things.app` prod / `.th
 ## Testing (TDD)
 
 - **`@things/auth` unit tests** for `trustedWebOrigins` / `authCookieDomain`: domain set vs unset, dev origins always present, correct 5 subdomains.
-- **Per-app auth-config unit test** (extend existing `auth` specs): with `THINGS_DOMAIN`/`AUTH_COOKIE_DOMAIN` set, `auth.options.trustedOrigins` includes the web origins and `advanced.crossSubDomainCookies.domain` matches env; with them unset, falls back to dev origins and no cookie override (proves prod-safe + dev-safe).
+- **Per-app wiring** is verified by `typecheck` (all 6 apps resolve and call the helper) + the apps' existing auth specs staying green + the bring-up acceptance (browser cross-subdomain login). We deliberately do **not** assert on Better Auth's internal `auth.options` shape — that's implementation-detail-fragile, and the deterministic logic already lives in (and is unit-tested in) the `@things/auth` helper.
 - **No integration/e2e expansion** — the existing cross-app e2e covers session flow at the service layer; browser cross-subdomain behavior is validated manually via the bring-up (login at `auth.things.test`, confirm authenticated calls to `api.do.things.test`).
 - All changes keep `npm run lint` / `typecheck` / `test:unit` green (the dev-origin fallback preserves the existing `npm run dev` flow).
 
