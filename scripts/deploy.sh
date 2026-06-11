@@ -20,6 +20,12 @@ if [ ! -f "${ROOT}/infra/.env" ]; then
   exit 1
 fi
 
+# Surface THINGS_DOMAIN for the smoke test at the end — `--env-file` only feeds
+# compose, not this shell, so without this the smoke step was always skipped.
+# Read it surgically (not `source .env`) so a TAG= passed for rollback isn't
+# clobbered by .env's own TAG=latest.
+export THINGS_DOMAIN="$(grep -E '^THINGS_DOMAIN=' "${ROOT}/infra/.env" | head -n1 | cut -d= -f2-)"
+
 echo "==> TAG=${TAG:-latest}  service=${SERVICE:-<all>}"
 # shellcheck disable=SC2086
 $COMPOSE pull ${SERVICE}

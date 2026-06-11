@@ -8,6 +8,7 @@ NestJS APIs + five Expo static web builds, backed by one Postgres instance
 infra/
   docker-compose.dev.yml     local dev: postgres + redis + mailhog
   docker-compose.prod.yml    production: caddy + 6 api + 5 web + postgres + redis
+  docker-compose.local.yml   local single-machine overlay: local images + internal CA
   Caddyfile                  reverse-proxy routing + TLS for every subdomain
   .env.example               production env/secrets template (copy to infra/.env)
   docker/
@@ -24,9 +25,13 @@ infra/
     README.md                retention policy + restore drill
 ```
 
-Build images are produced by `.github/workflows/deploy.yml` on merge to `main`
-and pushed to GHCR. Service-to-service calls use internal docker DNS
-(`http://api-do:3002`); only Caddy is published (80/443).
+Service-to-service calls use internal docker DNS (`http://api-do:3002`); only
+Caddy is published (80/443). Images would be built + pushed to GHCR by
+`.github/workflows/deploy.yml`, but that workflow is `workflow_dispatch`-only now
+(deploy is local — see below), so local builds use `scripts/build-local.sh`.
+
+> **Current reality:** the live deploy is the **local single-machine** path below
+> (`scripts/bring-up-local.sh`); the cloud VPS sections are kept for a future remote host.
 
 ## First-time VPS bring-up
 
@@ -67,8 +72,11 @@ equivalent.
 
 ## Deploys
 
-Automatic on merge to `main` (build → GHCR → SSH → `compose up` → smoke). Manual
-/ rollback on the VPS:
+Deploy is **local single-machine** today (above); the cloud VPS path is dormant.
+`.github/workflows/deploy.yml` (build → GHCR → SSH → `compose up` → smoke) is
+**`workflow_dispatch`-only** — it does not run on push, since its SSH step targets
+a VPS that doesn't currently exist. Trigger it manually once a remote target is
+back. Manual / rollback on a VPS:
 
 ```sh
 scripts/deploy.sh                  # whole stack, latest
@@ -80,9 +88,5 @@ TAG=<git-sha> scripts/deploy.sh    # pin a previous image (rollback)
 
 - **Wildcard TLS via DNS-01** once the registrar/DNS provider is chosen
   (spec §12) — needs an xcaddy build with the provider plugin.
-- **Cross-subdomain session cookies**: Better Auth must set the cookie on the
-  parent `.things.app` domain (spec §3.3) and trust the prod web origins. The
-  per-app `auth.ts` currently hardcodes `localhost:8081` as a trusted origin;
-  prod origins + `crossSubDomainCookies` need wiring in app code.
 - **Redis usage**: provisioned for the Socket.io adapter / caching; not yet
   consumed by app code.

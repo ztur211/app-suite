@@ -6,8 +6,8 @@
 #
 # EXPO_PUBLIC_* values are inlined into the JS bundle at export time, so the
 # API endpoints a given app talks to MUST be passed as build args (they cannot
-# be changed at container runtime). web-say currently reads none; the others
-# read EXPO_PUBLIC_AUTH_URL plus their own app endpoint.
+# be changed at container runtime). Each app reads EXPO_PUBLIC_AUTH_URL plus its
+# own app endpoint (EXPO_PUBLIC_<APP>_URL).
 #
 # Build (from repo root):
 #   docker build -f infra/docker/web.Dockerfile --build-arg APP=web-do \

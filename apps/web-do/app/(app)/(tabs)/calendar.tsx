@@ -147,7 +147,9 @@ export default function Calendar() {
                       width: 6,
                       height: 6,
                       borderRadius: 3,
-                      backgroundColor: isSelected ? '#fff' : tokens.colors.apps.do,
+                      backgroundColor: isSelected
+                        ? tokens.colors.surface.canvas
+                        : tokens.colors.apps.do,
                       marginTop: 2,
                     }}
                   />
