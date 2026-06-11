@@ -9,7 +9,7 @@
  *      then grants auth_reader SELECT on the just-created tables.
  *   4. Sets DATABASE_URL/AUTH_DATABASE_URL/BETTER_AUTH_SECRET so the
  *      singletons in src/auth/auth.ts pick up the right targets.
- *   5. Stashes the auth_owner URL on a global so test files can construct
+ *   5. Stashes the auth_owner URL on process.env so test files can construct
  *      writable Better Auth / AuthPrismaClient instances for User upsert/
  *      delete (api-say's runtime authPrisma is read-only).
  *
@@ -21,7 +21,6 @@ import { setupSuitePostgres, type SuitePostgres } from '@things/testing';
 
 declare global {
   var __THINGS_SAY_PG__: SuitePostgres | undefined;
-  var __THINGS_AUTH_OWNER_URL__: string | undefined;
 }
 
 export default async function globalSetup(): Promise<void> {
@@ -47,5 +46,8 @@ export default async function globalSetup(): Promise<void> {
   process.env['BETTER_AUTH_URL'] ??= 'http://localhost:3003';
 
   globalThis.__THINGS_SAY_PG__ = suite;
-  globalThis.__THINGS_AUTH_OWNER_URL__ = suite.urls.auth;
+  // Stash the writable auth_owner URL on process.env (not globalThis): env
+  // propagates to jest worker processes, so this survives multi-worker runs;
+  // globalThis is only visible in jest's single-process (in-band) mode.
+  process.env['THINGS_AUTH_OWNER_URL'] = suite.urls.auth;
 }
