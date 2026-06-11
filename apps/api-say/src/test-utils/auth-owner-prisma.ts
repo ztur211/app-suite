@@ -9,15 +9,11 @@
  */
 import { PrismaClient as AuthPrismaClient } from '../../prisma/generated/auth-client';
 
-declare global {
-  var __THINGS_AUTH_OWNER_URL__: string | undefined;
-}
-
 export function createAuthOwnerPrisma(): AuthPrismaClient {
-  const url = globalThis.__THINGS_AUTH_OWNER_URL__;
+  const url = process.env['THINGS_AUTH_OWNER_URL'];
   if (!url) {
     throw new Error(
-      'createAuthOwnerPrisma: __THINGS_AUTH_OWNER_URL__ not set. ' +
+      'createAuthOwnerPrisma: THINGS_AUTH_OWNER_URL not set. ' +
         'Did jest.integration.globalSetup.ts run?',
     );
   }
