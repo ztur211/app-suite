@@ -46,11 +46,20 @@ and pushed to GHCR. Service-to-service calls use internal docker DNS
 
 Run the whole stack on one Linux box, reachable in a browser on that machine.
 
+**Fastest path — one command:** `scripts/bring-up-local.sh` does everything
+below (generates `infra/.env` with local defaults + fresh secrets, adds the
+`/etc/hosts` entries via sudo, builds any missing images, starts the stack, and
+trusts Caddy's local CA), then drops you into a `things` tmux session with live
+logs + a health watch. Re-run it any time; `scripts/bring-up-local.sh --down`
+tears it back down (DB volumes kept). The numbered steps below are the manual
+equivalent.
+
 1. `/etc/hosts`:
    `127.0.0.1  auth.things.test api.do.things.test api.say.things.test api.buy.things.test api.eat.things.test api.send.things.test do.things.test say.things.test buy.things.test eat.things.test send.things.test`
 2. `cp infra/.env.example infra/.env && chmod 600 infra/.env`; set `THINGS_DOMAIN=things.test`,
    `AUTH_COOKIE_DOMAIN=.things.test`, `CADDY_EXTRA_GLOBAL=local_certs`, and generate the
-   passwords/secrets (`openssl rand -base64 36`). `OPENAI_/ANTHROPIC_KEY` are optional.
+   passwords/secrets (`openssl rand -hex 32` — hex, not base64: these values land in
+   `postgresql://…` URLs where base64's `+`/`/` would corrupt them). `OPENAI_/ANTHROPIC_KEY` are optional.
 3. `scripts/build-local.sh`
 4. `docker compose -f infra/docker-compose.prod.yml -f infra/docker-compose.local.yml --env-file infra/.env up -d`
 5. Trust Caddy's local CA: `docker compose ... cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-local-ca.crt`,

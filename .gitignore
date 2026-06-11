@@ -55,3 +55,6 @@ android/
 
 # Local Docker install helper (downloaded from get.docker.com; not part of the repo)
 get-docker.sh
+
+# Local single-machine deploy: Caddy internal-CA root exported by scripts/bring-up-local.sh
+caddy-local-ca.crt
