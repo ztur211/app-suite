@@ -1,14 +1,13 @@
 name: Deploy
 
-# Runs after merge to main. Trusts the PR gate (pull-request.yml already ran
-# lint + typecheck + unit + integration + build), so it does NOT re-run tests.
-# It builds every service image, pushes to GHCR, then SSHes to the VPS to pull
-# and restart the stack, and finally smoke-tests the live endpoints.
+# Manual-dispatch only: deploy is a LOCAL single-machine bring-up now (the cloud
+# VPS was abandoned), so this does NOT run on every push — the SSH deploy job
+# would fail against a nonexistent VPS. Kept here (image build + GHCR push + SSH
+# deploy + smoke test) for when a remote target exists again. Trusts the PR gate
+# (pull-request.yml already ran lint + typecheck + unit + integration + build).
 # (Foundation spec §6.4.)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
