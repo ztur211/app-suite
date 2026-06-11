@@ -24,6 +24,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@prisma/client": "^5.22.0",
     "@things/auth": "*",
+    "@things/nest-kit": "*",
     "@things/say-sdk": "*",
     "@things/types": "*",
     "axios": "^1.7.7",

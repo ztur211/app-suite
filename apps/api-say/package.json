@@ -28,6 +28,7 @@
     "@things/ai": "*",
     "@things/auth": "*",
     "@things/do-sdk": "*",
+    "@things/nest-kit": "*",
     "@things/types": "*",
     "better-auth": "^1.6.11",
     "dotenv": "^16.4.0",

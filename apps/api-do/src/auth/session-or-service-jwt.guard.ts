@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { SessionGuard } from './session.guard';
-import { ServiceJwtGuard } from './service-jwt.guard';
+import { ServiceJwtGuard } from '@things/nest-kit';
 
 /**
  * Composite guard: accepts EITHER a Better Auth session cookie OR a service
@@ -11,7 +11,7 @@ import { ServiceJwtGuard } from './service-jwt.guard';
 @Injectable()
 export class SessionOrServiceJwtGuard implements CanActivate {
   private readonly session = new SessionGuard();
-  private readonly service = new ServiceJwtGuard(['api-say']);
+  private readonly service = new ServiceJwtGuard({ expectedAud: 'api-do', whitelist: ['api-say'] });
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest<{
