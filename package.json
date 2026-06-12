@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "build:packages": "npm run build -w @things/types -w @things/auth -w @things/nest-kit -w @things/ai -w @things/config -w @things/db -w @things/design-system -w @things/buy-sdk -w @things/eat-sdk -w @things/send-sdk -w @things/testing -w @things/do-sdk -w @things/say-sdk",
+    "build:packages": "npm run build -w @things/types -w @things/auth -w @things/nest-kit -w @things/ai -w @things/config -w @things/db -w @things/design-system -w @things/web-kit -w @things/buy-sdk -w @things/eat-sdk -w @things/send-sdk -w @things/testing -w @things/do-sdk -w @things/say-sdk",
     "clean": "npm run clean --workspaces --if-present && rimraf node_modules",
     "db:generate": "npm run db:generate --workspaces --if-present",
     "dev": "echo 'Use a workspace-specific dev script, e.g. `npm run dev -w apps/api-auth`'",
