@@ -1,3 +1,5 @@
+export type { User } from '@things/types';
+
 export interface Task {
   id: string;
   userId: string;
@@ -6,10 +8,4 @@ export interface Task {
   dueAt: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string | null;
 }
