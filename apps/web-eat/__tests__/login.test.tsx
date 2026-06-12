@@ -1,8 +1,8 @@
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import Login from '../app/(auth)/login';
-import { useAuth } from '../store/auth.store';
+import { useAuth } from '@things/web-kit';
 
-jest.mock('../store/auth.store', () => ({
+jest.mock('@things/web-kit', () => ({
   useAuth: jest.fn(),
 }));
 

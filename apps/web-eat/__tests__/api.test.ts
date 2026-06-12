@@ -1,4 +1,4 @@
-import { authApi, mealsApi } from '../lib/api';
+import { mealsApi } from '../lib/api';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -15,22 +15,6 @@ function makeResponse(body: unknown, status = 200) {
 
 beforeEach(() => {
   mockFetch.mockReset();
-});
-
-describe('authApi', () => {
-  it('signIn calls POST /auth/sign-in/email', async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeResponse({ user: { id: '1', email: 'a@b.com', name: 'a' } }),
-    );
-    await authApi.signIn('a@b.com', 'password123');
-    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('http://localhost:3001/auth/sign-in/email');
-  });
-
-  it('throws on non-ok response', async () => {
-    mockFetch.mockResolvedValueOnce(makeResponse({ error: 'bad' }, 401));
-    await expect(authApi.signIn('x@y.com', 'wrongpass')).rejects.toThrow('401');
-  });
 });
 
 describe('mealsApi', () => {
