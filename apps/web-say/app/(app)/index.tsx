@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Heading, Button, Card, TextInput, tokens } from '@things/design-system';
-import { useAuth } from '../../store/auth.store';
+import { useAuth } from '@things/web-kit';
 import { useDictations } from '../../store/dictations.store';
 import { intentColor, intentLabel } from '../../lib/intent';
 import type { Dictation } from '../../lib/types';
