@@ -21,10 +21,12 @@
     "@things/auth": "*"
   },
   "peerDependencies": {
-    "@nestjs/common": "^11.0.0"
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0"
   },
   "devDependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.13",
     "jest": "^29.7.0",
