@@ -1,4 +1,4 @@
-import { authApi, itemsApi } from '../lib/api';
+import { itemsApi } from '../lib/api';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -15,36 +15,6 @@ function makeResponse(body: unknown, status = 200) {
 
 beforeEach(() => {
   mockFetch.mockReset();
-});
-
-describe('authApi', () => {
-  it('signUp calls POST /auth/sign-up/email with email, password, name', async () => {
-    const user = { id: '1', email: 'a@b.com', name: 'a' };
-    mockFetch.mockResolvedValueOnce(makeResponse({ user }));
-    await authApi.signUp('a@b.com', 'pass1234');
-    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('http://localhost:3001/auth/sign-up/email');
-    expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body as string)).toEqual({
-      email: 'a@b.com',
-      password: 'pass1234',
-      name: 'a',
-    });
-  });
-
-  it('signIn calls POST /auth/sign-in/email', async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeResponse({ user: { id: '2', email: 'b@c.com', name: 'b' } }),
-    );
-    await authApi.signIn('b@c.com', 'secret123');
-    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('http://localhost:3001/auth/sign-in/email');
-  });
-
-  it('throws on non-ok response', async () => {
-    mockFetch.mockResolvedValueOnce(makeResponse({ error: 'bad' }, 401));
-    await expect(authApi.signIn('x@y.com', 'wrong1234')).rejects.toThrow('401');
-  });
 });
 
 describe('itemsApi', () => {

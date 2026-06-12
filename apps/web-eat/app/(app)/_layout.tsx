@@ -1,5 +1,5 @@
 import { Stack, Redirect } from 'expo-router';
-import { useAuth } from '../../store/auth.store';
+import { useAuth } from '@things/web-kit';
 
 export default function AppLayout() {
   const { user } = useAuth();

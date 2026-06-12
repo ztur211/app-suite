@@ -9,6 +9,7 @@ const config: Config = {
   ],
   moduleNameMapper: {
     '^@things/design-system$': path.resolve(__dirname, '../../packages/design-system/src/index.ts'),
+    '^@things/web-kit$': path.resolve(__dirname, '../../packages/web-kit/src/index.ts'),
   },
   testRegex: '.*\\.(test|spec)\\.tsx?$',
   testPathIgnorePatterns: ['/node_modules/', '/.expo/'],

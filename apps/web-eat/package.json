@@ -19,6 +19,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@things/design-system": "*",
     "@things/types": "*",
+    "@things/web-kit": "*",
     "expo": "~55.0.24",
     "expo-constants": "~55.0.16",
     "expo-linking": "~55.0.15",

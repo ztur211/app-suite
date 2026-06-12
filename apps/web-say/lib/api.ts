@@ -1,23 +1,7 @@
-import type { Dictation, Proposal, User } from './types';
+import { apiRequest } from '@things/web-kit';
+import type { Dictation, Proposal } from './types';
 
-const AUTH_URL = process.env.EXPO_PUBLIC_AUTH_URL ?? 'http://localhost:3001';
 const SAY_URL = process.env.EXPO_PUBLIC_SAY_URL ?? 'http://localhost:3003';
-
-async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init.headers as Record<string, string> | undefined),
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`${res.status} ${res.statusText}: ${text}`);
-  }
-  return res.json() as Promise<T>;
-}
 
 /** Idempotency-Key for mutating /dictations calls; also becomes the new dictation's id on create. */
 function newIdempotencyKey(): string {
@@ -26,23 +10,8 @@ function newIdempotencyKey(): string {
   return `idem-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export const authApi = {
-  signUp: (email: string, password: string) =>
-    request<{ user: User }>(`${AUTH_URL}/auth/sign-up/email`, {
-      method: 'POST',
-      body: JSON.stringify({ email, password, name: email.split('@')[0] }),
-    }),
-  signIn: (email: string, password: string) =>
-    request<{ user: User }>(`${AUTH_URL}/auth/sign-in/email`, {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
-  signOut: () => request<void>(`${AUTH_URL}/auth/sign-out`, { method: 'POST' }),
-  getSession: () => request<{ user: User } | null>(`${AUTH_URL}/auth/get-session`),
-};
-
 export const dictationsApi = {
-  list: () => request<Dictation[]>(`${SAY_URL}/dictations`),
+  list: () => apiRequest<Dictation[]>(`${SAY_URL}/dictations`),
 
   /**
    * Create a typed dictation. captureMode 'type' skips Whisper transcription;
@@ -68,15 +37,15 @@ export const dictationsApi = {
   },
 
   dispatch: (id: string) =>
-    request<{ dictation: Dictation; renderedEmail?: string }>(
+    apiRequest<{ dictation: Dictation; renderedEmail?: string }>(
       `${SAY_URL}/dictations/${id}/dispatch`,
       { method: 'POST', headers: { 'Idempotency-Key': newIdempotencyKey() } },
     ),
   undoDispatch: (id: string) =>
-    request<Dictation>(`${SAY_URL}/dictations/${id}/dispatch`, {
+    apiRequest<Dictation>(`${SAY_URL}/dictations/${id}/dispatch`, {
       method: 'DELETE',
       headers: { 'Idempotency-Key': newIdempotencyKey() },
     }),
   remove: (id: string) =>
-    request<{ ok: boolean }>(`${SAY_URL}/dictations/${id}`, { method: 'DELETE' }),
+    apiRequest<{ ok: boolean }>(`${SAY_URL}/dictations/${id}`, { method: 'DELETE' }),
 };

@@ -1,11 +1,11 @@
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import Messages from '../app/(app)/index';
-import { useAuth } from '../store/auth.store';
+import { useAuth } from '@things/web-kit';
 import { useMessages } from '../store/messages.store';
 import { messagesApi } from '../lib/api';
 import type { Message } from '../lib/types';
 
-jest.mock('../store/auth.store', () => ({
+jest.mock('@things/web-kit', () => ({
   useAuth: jest.fn(),
 }));
 
