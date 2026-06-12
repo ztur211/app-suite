@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { useAuth } from '../store/auth.store';
+import { useAuth } from '@things/web-kit';
 import { ThemeProvider, tokens } from '@things/design-system';
 
 export default function RootLayout() {
