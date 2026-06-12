@@ -139,3 +139,16 @@ export default function Login() {
 - **RN single-copy deps** — `react`/`react-native`/`zustand` are `peerDependencies` (not bundled) to avoid duplicate-copy hazards; the apps already provide them.
 - **Jest/RN preset parity** — web-kit must carry the same `@react-native/jest-preset@0.85.3` + `@testing-library/react-native@^13.3.3` pinning the apps use (RN 0.85 compat note in CLAUDE.md), or the `LoginScreen` test won't run.
 - **Import-path churn** — repointing `useAuth` imports touches `login.tsx` and any layout guard; a repo-wide grep for `store/auth.store` confirms the full set before each app is migrated.
+
+---
+
+## Implementation notes (discovered during planning, 2026-06-12)
+
+These refine the per-PR TDD sections above; they were found by reading the actual test files and jest configs.
+
+- **Module resolution is split.** App jest configs resolve `@things/*` to **source** via `moduleNameMapper` (e.g. web-do maps `^@things/design-system$` → `../../packages/design-system/src/index.ts`) and allow-list `@things` in `transformIgnorePatterns`. So each migrated app's `jest.config.ts` must gain a `^@things/web-kit$` → `../../packages/web-kit/src/index.ts` mapper (PR 2). `typecheck` (tsc), by contrast, resolves `@things/*` from built `dist/*.d.ts`, so `build:packages` must build `web-kit` (inserted after `design-system`) before any app/pkg `typecheck`.
+- **`User` is type-only, so PR 1 is typecheck-driven.** Every `User` usage is `import type` / a type annotation, which Babel erases — a jest runtime test cannot fail when `User` is missing. PR 1's red/green is therefore `npm run typecheck` (+ existing app suites stay green unchanged). The `identity.test.ts` is a compile-checked usage that documents the shape; it is not a behavioral test.
+- **Duplicated _tests_ consolidate too, not just source.** The apps already test the moving code: `auth.store.test.ts` (web-do, web-buy), the `authApi` half of `api.test.ts` (web-do, web-buy, web-eat, web-send), and `login.test.tsx` (those four). PR 2/PR 3 move this coverage into `web-kit` (once) and **delete** the per-app copies; each app's `api.test.ts` keeps only its domain-API tests (`tasksApi`/`itemsApi`/…). web-say has only `smoke.test.tsx` (no auth/login tests) — nothing to delete there.
+- **Component-test mocks retarget.** Tests that `jest.mock('../store/auth.store', …)` (e.g. `today.test.tsx`, `login.test.tsx`) must switch to `jest.mock('@things/web-kit', …)` once the component imports `useAuth` from the package (PR 2/PR 3). Mocks of `../lib/api` for a _domain_ API (`tasksApi`, `itemsApi`) stay as-is.
+- **`npm install` after manifest edits.** Adding `@things/types`/`@things/web-kit` to an app's `dependencies` requires a root `npm install` to create the workspace symlink before typecheck/build resolves it.
+- **Per-PR plans.** Each PR is planned and executed as its own bite-sized plan under `docs/superpowers/plans/` (matching the "three small PRs" decision); this spec is the shared high-level reference for all three.
