@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '../../../prisma/generated/client';
 import { TasksService } from '../tasks.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 // Mock PrismaClient but preserve the real Prisma namespace (we need
 // Prisma.JsonNull, which is a runtime sentinel the service passes through).
@@ -32,7 +33,7 @@ describe('TasksService (unit)', () => {
 
   beforeEach(() => {
     prisma = new (PrismaClient as unknown as new () => typeof prisma)();
-    service = new TasksService(prisma as unknown as PrismaClient);
+    service = new TasksService(prisma as unknown as PrismaService);
     jest.clearAllMocks();
   });
 
