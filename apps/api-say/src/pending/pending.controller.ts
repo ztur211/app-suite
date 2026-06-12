@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
-import { ServiceJwtGuard } from './service-jwt.guard';
+import { ServiceJwtGuard } from '@things/nest-kit';
 import { PendingService, type PendingDestination } from './pending.service';
 
 @Controller('pending')
-@UseGuards(new ServiceJwtGuard(['api-buy', 'api-eat']))
+@UseGuards(new ServiceJwtGuard({ expectedAud: 'api-say', whitelist: ['api-buy', 'api-eat'] }))
 export class PendingController {
   constructor(private readonly svc: PendingService) {}
 
