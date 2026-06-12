@@ -27,6 +27,7 @@
     "@prisma/client": "^5.22.0",
     "@things/ai": "*",
     "@things/auth": "*",
+    "@things/config": "*",
     "@things/do-sdk": "*",
     "@things/nest-kit": "*",
     "@things/types": "*",

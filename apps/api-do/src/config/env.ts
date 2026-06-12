@@ -2,9 +2,7 @@ import { z } from 'zod';
 import { serviceEnvSchema, loadEnv as parseEnv } from '@things/config';
 
 export const envSchema = serviceEnvSchema.extend({
-  PORT: z.coerce.number().int().positive().default(3005),
-  /** Base URL of api-say (used by SaySdk for pull-from-pending). */
-  SAY_API_URL: z.string().url(),
+  PORT: z.coerce.number().int().positive().default(3002),
 });
 
 export type Env = z.infer<typeof envSchema>;
