@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, PrismaClient } from '../../prisma/generated/client';
+import { Prisma } from '../../prisma/generated/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 export interface UpdateTaskData {
   title?: string;
@@ -10,7 +11,7 @@ export interface UpdateTaskData {
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async list(userId: string) {
     return this.prisma.task.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });

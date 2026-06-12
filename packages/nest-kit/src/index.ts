@@ -3,3 +3,4 @@ export const PACKAGE_NAME = '@things/nest-kit' as const;
 export { AbstractSessionGuard, type SessionData } from './session.guard';
 export { ServiceJwtGuard, type ServiceJwtGuardOptions } from './service-jwt.guard';
 export { bootstrapThingsApp, type BootstrapOptions } from './bootstrap';
+export { PrismaLifecycleMixin, type PrismaLifecycleClient } from './prisma-lifecycle';
