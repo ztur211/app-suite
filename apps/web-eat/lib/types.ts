@@ -1,3 +1,5 @@
+export type { User } from '@things/types';
+
 export type MealKind = 'recipe' | 'restaurant' | 'either';
 export type MealStatus = 'active' | 'tried';
 
@@ -11,10 +13,4 @@ export interface MealItem {
   sourceDictationId: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string | null;
 }
