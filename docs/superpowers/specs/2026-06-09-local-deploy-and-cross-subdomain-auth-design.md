@@ -1,6 +1,6 @@
 # Local single-machine deploy + cross-subdomain auth — design
 
-> **Status:** approved design, pre-implementation. Date: 2026-06-09.
+> **Status:** ✅ implemented + merged (2026-06-11). Design dated 2026-06-09.
 > **Sub-skill for implementation:** `superpowers:writing-plans` → `superpowers:test-driven-development`.
 
 ## Goal
@@ -88,7 +88,7 @@ ACME_EMAIL=local@things.test          # required by compose; unused with local_c
 ### A6. Bring-up procedure
 
 1. Clone the repo onto the box (HTTPS if the repo is public; a read-only deploy key or PAT if private).
-2. Write `/etc/hosts` (A1) and `infra/.env` (A5; generate secrets with `openssl rand -base64 36`).
+2. Write `/etc/hosts` (A1) and `infra/.env` (A5; generate secrets with `openssl rand -hex 32` — hex, not base64, which corrupts the `postgresql://` URLs).
 3. `scripts/build-local.sh` (builds + tags all 11 images natively).
 4. `docker compose -f infra/docker-compose.prod.yml -f infra/docker-compose.local.yml --env-file infra/.env up -d`.
 5. Each API runs `prisma migrate deploy` on start (existing entrypoint). Trust Caddy's root cert (A2). Open `https://do.things.test`.

@@ -31,6 +31,17 @@ x-api-defaults: &api-defaults
     postgres:
       condition: service_healthy
 
+# Shared scaffolding for every static web service (identical but for image/name).
+x-web-defaults: &web-defaults
+  restart: unless-stopped
+  networks: [things]
+  logging: *default-logging
+  healthcheck:
+    test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
+    interval: 30s
+    timeout: 5s
+    retries: 5
+
 services:
   caddy:
     image: caddy:2-alpine
@@ -223,66 +234,31 @@ services:
       timeout: 5s
       retries: 5
 
-  # ---- Web services (static nginx) ----
+  # ---- Web services (static nginx) — all share x-web-defaults ----
   web-do:
+    <<: *web-defaults
     image: ${REGISTRY:-ghcr.io/ztur211}/things-web-do:${TAG:-latest}
     container_name: things-web-do
-    restart: unless-stopped
-    networks: [things]
-    logging: *default-logging
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
   web-say:
+    <<: *web-defaults
     image: ${REGISTRY:-ghcr.io/ztur211}/things-web-say:${TAG:-latest}
     container_name: things-web-say
-    restart: unless-stopped
-    networks: [things]
-    logging: *default-logging
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
   web-buy:
+    <<: *web-defaults
     image: ${REGISTRY:-ghcr.io/ztur211}/things-web-buy:${TAG:-latest}
     container_name: things-web-buy
-    restart: unless-stopped
-    networks: [things]
-    logging: *default-logging
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
   web-eat:
+    <<: *web-defaults
     image: ${REGISTRY:-ghcr.io/ztur211}/things-web-eat:${TAG:-latest}
     container_name: things-web-eat
-    restart: unless-stopped
-    networks: [things]
-    logging: *default-logging
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
   web-send:
+    <<: *web-defaults
     image: ${REGISTRY:-ghcr.io/ztur211}/things-web-send:${TAG:-latest}
     container_name: things-web-send
-    restart: unless-stopped
-    networks: [things]
-    logging: *default-logging
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
 networks:
   things:
