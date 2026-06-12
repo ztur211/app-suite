@@ -1,11 +1,11 @@
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import Tasks from '../app/(app)/(tabs)/index';
-import { useAuth } from '../store/auth.store';
+import { useAuth } from '@things/web-kit';
 import { useTasks } from '../store/tasks.store';
 import { tasksApi } from '../lib/api';
 import type { Task } from '../lib/types';
 
-jest.mock('../store/auth.store', () => ({
+jest.mock('@things/web-kit', () => ({
   useAuth: jest.fn(),
 }));
 
