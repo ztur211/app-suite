@@ -1,3 +1,5 @@
+export type { User } from '@things/types';
+
 export type Intent = 'DO' | 'NOTE' | 'SEND' | 'BUY' | 'EAT';
 export type DictationState = 'proposed' | 'confirmed' | 'dispatched' | 'cancelled';
 export type CaptureMode = 'tap' | 'drive' | 'type';
@@ -19,12 +21,6 @@ export interface Dictation {
   cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string | null;
 }
 
 /** The shape api-say returns from POST /dictations and /reclassify. */

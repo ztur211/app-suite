@@ -1,4 +1,4 @@
-import type { Message, MessageChannel, MessageStatus } from './types';
+import type { Message, MessageChannel, MessageStatus, User } from './types';
 
 const AUTH_URL = process.env.EXPO_PUBLIC_AUTH_URL ?? 'http://localhost:3001';
 const SEND_URL = process.env.EXPO_PUBLIC_SEND_URL ?? 'http://localhost:3006';
@@ -21,26 +21,17 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
 
 export const authApi = {
   signUp: (email: string, password: string) =>
-    request<{ user: { id: string; email: string; name: string | null } }>(
-      `${AUTH_URL}/auth/sign-up/email`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ email, password, name: email.split('@')[0] }),
-      },
-    ),
+    request<{ user: User }>(`${AUTH_URL}/auth/sign-up/email`, {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name: email.split('@')[0] }),
+    }),
   signIn: (email: string, password: string) =>
-    request<{ user: { id: string; email: string; name: string | null } }>(
-      `${AUTH_URL}/auth/sign-in/email`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      },
-    ),
+    request<{ user: User }>(`${AUTH_URL}/auth/sign-in/email`, {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
   signOut: () => request<void>(`${AUTH_URL}/auth/sign-out`, { method: 'POST' }),
-  getSession: () =>
-    request<{ user: { id: string; email: string; name: string | null } } | null>(
-      `${AUTH_URL}/auth/get-session`,
-    ),
+  getSession: () => request<{ user: User } | null>(`${AUTH_URL}/auth/get-session`),
 };
 
 export interface MessageCreate {

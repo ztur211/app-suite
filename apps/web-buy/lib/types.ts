@@ -1,3 +1,5 @@
+export type { User } from '@things/types';
+
 export interface ShoppingItem {
   id: string;
   userId: string;
@@ -8,10 +10,4 @@ export interface ShoppingItem {
   sourceDictationId: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string | null;
 }

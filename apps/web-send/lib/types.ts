@@ -1,3 +1,5 @@
+export type { User } from '@things/types';
+
 export type MessageChannel = 'email' | 'slack' | 'discord' | 'telegram';
 export type MessageKind = 'outbound' | 'inbound';
 export type MessageStatus = 'draft' | 'sent' | 'unread' | 'read' | 'archived';
@@ -14,10 +16,4 @@ export interface Message {
   sourceDictationId: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string | null;
 }
