@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@things/auth": "*",
+    "@things/config": "*",
     "@things/nest-kit": "*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.1.21",

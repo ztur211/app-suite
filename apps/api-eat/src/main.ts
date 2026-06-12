@@ -3,13 +3,14 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { trustedWebOrigins } from '@things/auth';
 import { AppModule } from './app.module';
+import { loadEnv } from './config/env';
 
 async function bootstrap(): Promise<void> {
+  const env = loadEnv();
   const app = await NestFactory.create(AppModule);
   app.enableCors({ origin: trustedWebOrigins(), credentials: true });
-  const port = Number(process.env.PORT ?? 3005);
-  await app.listen(port);
-  console.warn(`[api-eat] listening on http://localhost:${port}`);
+  await app.listen(env.PORT);
+  console.warn(`[api-eat] listening on http://localhost:${env.PORT}`);
 }
 
 void bootstrap();
