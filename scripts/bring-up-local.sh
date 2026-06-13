@@ -229,20 +229,25 @@ trust_ca() {
 }
 
 print_status() {
-  local domain app
+  local domain cookie app
   domain="$(read_env THINGS_DOMAIN)"; domain="${domain:-things.test}"
+  cookie="$(read_env AUTH_COOKIE_DOMAIN)"; cookie="${cookie:-.${domain}}"
   echo ""
   echo "================================================================"
   echo " Things local stack is up. Open (after trusting the CA above):"
   for app in "${WEB_APPS[@]}"; do
     printf "     https://%s.%s\n" "${app}" "${domain}"
   done
-  echo "     https://auth.${domain}   <- log in here"
+  echo "     (https://auth.${domain} is the auth API only — no page to open there)"
   echo ""
-  echo " Acceptance (plan Task 10): log in at https://auth.${domain}, then"
-  echo " return to https://do.${domain} — you should be authenticated and the"
-  echo " app's calls to https://api.do.${domain} should succeed (cross-subdomain"
-  echo " session cookie). Spot-check one more app (e.g. say)."
+  echo " Acceptance (plan Task 10) — validate cross-subdomain login:"
+  echo "   1. Open https://do.${domain} — it redirects to the login screen."
+  echo "      The DB starts empty, so choose \"Sign up\" and create an account"
+  echo "      (that signs you in). You land in Do Things, and its calls to"
+  echo "      https://api.do.${domain} should succeed (check the network tab)."
+  echo "   2. In the SAME browser, open https://say.${domain} — you should be"
+  echo "      ALREADY authenticated, with no second sign-in. That proves the"
+  echo "      session cookie (scoped to ${cookie}) is shared across subdomains."
   echo ""
   echo " Panes:  [left] this shell   [top-right] health   [bottom-right] logs"
   echo " Tear down later:  scripts/bring-up-local.sh --down"
