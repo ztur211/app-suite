@@ -24,8 +24,12 @@ COPY . .
 # resolve for the workspace builds below.
 RUN npm ci --include=dev --no-audit --no-fund
 ENV PATH="/repo/node_modules/.bin:${PATH}"
-# web apps consume @things/design-system from its built dist.
-RUN npm run build -w @things/design-system
+# web apps consume @things/* from their built dist (Metro resolves each
+# package's package.json "main" -> dist/index.js; there are no path aliases or
+# source fields). Build in dependency order: dependency-free (types,
+# design-system, ai) first, then web-kit (-> design-system + types).
+RUN npm run build -w @things/types -w @things/design-system -w @things/ai \
+ && npm run build -w @things/web-kit
 
 # EXPO_PUBLIC_* are baked into the bundle by `expo export`.
 ARG EXPO_PUBLIC_AUTH_URL
