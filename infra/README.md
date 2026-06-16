@@ -1,13 +1,22 @@
 # Things suite — infrastructure (P5)
 
 Single-VPS production stack: Caddy (auto-TLS reverse proxy) in front of six
-NestJS APIs + five Expo static web builds, backed by one Postgres instance
-(six databases) and Redis. Foundation spec §6.
+NestJS APIs, backed by one Postgres instance (six databases) and Redis.
+Foundation spec §6.
+
+> **Web apps run on Vercel.** The five Expo web apps are deployed to Vercel
+> (static `expo export -p web` on its CDN), **not** the VPS — see
+> [`VERCEL.md`](./VERCEL.md) and
+> `docs/superpowers/specs/2026-06-15-vercel-web-deploy-design.md`. The `web-*`
+> Docker services / `web.Dockerfile` / Caddy `<app>.<domain>` routes below are
+> kept for the **local full-stack** bring-up only. Because web ↔ API is then
+> cross-site, auth is **Bearer-token** based (the APIs need the Vercel origins in
+> `WEB_ORIGINS`).
 
 ```
 infra/
   docker-compose.dev.yml     local dev: postgres + redis + mailhog
-  docker-compose.prod.yml    production: caddy + 6 api + 5 web + postgres + redis
+  docker-compose.prod.yml    caddy + 6 api + postgres + redis (+ 5 web for local full-stack)
   docker-compose.local.yml   local single-machine overlay: local images + internal CA
   Caddyfile                  reverse-proxy routing + TLS for every subdomain
   .env.example               production env/secrets template (copy to infra/.env)
@@ -90,3 +99,9 @@ TAG=<git-sha> scripts/deploy.sh    # pin a previous image (rollback)
   (spec §12) — needs an xcaddy build with the provider plugin.
 - **Redis usage**: provisioned for the Socket.io adapter / caching; not yet
   consumed by app code.
+- **APIs-only VPS + Caddy web routes**: on a real APIs-only VPS, the `<app>.<domain>`
+  site blocks in `Caddyfile` would make Caddy attempt ACME certs for the web
+  subdomains — which now resolve to Vercel, so the challenge fails. Before that
+  deploy, remove those five web blocks from the prod `Caddyfile` (or split them
+  into a local-only Caddyfile) so the VPS only serves `auth.` + `api.*.`. The
+  `deploy.yml` SSH step already brings up API services only.

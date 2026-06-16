@@ -6,6 +6,10 @@ name: Deploy
 # deploy + smoke test) for when a remote target exists again. Trusts the PR gate
 # (pull-request.yml already ran lint + typecheck + unit + integration + build).
 # (Foundation spec §6.4.)
+#
+# The five web apps are hosted on VERCEL (see infra/VERCEL.md), not built or
+# deployed here — this workflow builds + ships the six NestJS APIs only, and the
+# VPS runs APIs + infra (caddy/postgres/redis).
 
 on:
   workflow_dispatch:
@@ -50,51 +54,10 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,scope=${{ matrix.app }},mode=max
 
-  build-webs:
-    name: Build web image (${{ matrix.app }})
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [web-do, web-say, web-buy, web-eat, web-send]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      # EXPO_PUBLIC_* values are baked into the static bundle at build time.
-      # THINGS_DOMAIN is a repo variable (Settings → Variables), e.g. things.app.
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: infra/docker/web.Dockerfile
-          push: true
-          build-args: |
-            APP=${{ matrix.app }}
-            EXPO_PUBLIC_AUTH_URL=https://auth.${{ vars.THINGS_DOMAIN }}
-            EXPO_PUBLIC_DO_URL=https://api.do.${{ vars.THINGS_DOMAIN }}
-            EXPO_PUBLIC_SAY_URL=https://api.say.${{ vars.THINGS_DOMAIN }}
-            EXPO_PUBLIC_BUY_URL=https://api.buy.${{ vars.THINGS_DOMAIN }}
-            EXPO_PUBLIC_EAT_URL=https://api.eat.${{ vars.THINGS_DOMAIN }}
-            EXPO_PUBLIC_SEND_URL=https://api.send.${{ vars.THINGS_DOMAIN }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/things-${{ matrix.app }}:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/things-${{ matrix.app }}:${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,scope=${{ matrix.app }},mode=max
-
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
-    needs: [build-apis, build-webs]
+    needs: [build-apis]
     steps:
       - name: Pull images and restart the stack over SSH
         uses: appleboy/ssh-action@v1
@@ -107,8 +70,11 @@ jobs:
             cd /opt/things
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             export TAG=${{ github.sha }}
-            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env pull
-            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env up -d
+            # Web apps live on Vercel — bring up the APIs + infra only (the web-*
+            # services in the compose file are for local full-stack bring-up).
+            API_SERVICES="caddy postgres redis api-auth api-do api-say api-buy api-eat api-send"
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env pull $API_SERVICES
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env up -d $API_SERVICES
             docker image prune -f
 
   smoke:

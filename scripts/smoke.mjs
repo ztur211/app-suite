@@ -7,8 +7,9 @@
 //   THINGS_DOMAIN=things.app node scripts/smoke.mjs
 //   node scripts/smoke.mjs --base http://localhost   # against a local stack
 //
-// API services expose GET /health -> { status: "ok", service: "<name>" };
-// web services (nginx) expose GET /healthz -> "ok".
+// API services expose GET /health -> { status: "ok", service: "<name>" }.
+// The web apps are on Vercel (see infra/VERCEL.md) — not on $THINGS_DOMAIN /
+// the VPS — so they are not smoke-tested here; verify them on their Vercel URLs.
 
 const args = process.argv.slice(2);
 const baseFlagIdx = args.indexOf('--base');
@@ -39,7 +40,6 @@ if (base) {
       url: `https://api.${app}.${domain}/health`,
       path: '/health',
     });
-    targets.push({ name: `web-${app}`, url: `https://${app}.${domain}/healthz`, path: '/healthz' });
   }
 }
 
