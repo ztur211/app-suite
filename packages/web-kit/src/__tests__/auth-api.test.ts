@@ -1,19 +1,34 @@
 import { authApi } from '../auth-api';
+import { tokenStore } from '../token-store';
+
+jest.mock('../token-store', () => ({
+  tokenStore: { get: jest.fn(), set: jest.fn(), clear: jest.fn() },
+}));
+const mockSet = tokenStore.set as jest.Mock;
+const mockClear = tokenStore.clear as jest.Mock;
+const mockGet = tokenStore.get as jest.Mock;
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-function makeResponse(body: unknown, status = 200) {
+function makeResponse(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return {
     ok: status >= 200 && status < 300,
     status,
     statusText: status === 200 ? 'OK' : 'Error',
     json: () => Promise.resolve(body),
     text: () => Promise.resolve(JSON.stringify(body)),
+    headers: { get: (k: string) => headers[k.toLowerCase()] ?? null },
   } as unknown as Response;
 }
 
-beforeEach(() => mockFetch.mockReset());
+beforeEach(() => {
+  mockFetch.mockReset();
+  mockSet.mockReset();
+  mockClear.mockReset();
+  mockGet.mockReset();
+  mockGet.mockReturnValue(null);
+});
 
 describe('authApi', () => {
   it('signUp POSTs email, password, derived name to /auth/sign-up/email', async () => {
@@ -63,5 +78,45 @@ describe('authApi', () => {
   it('throws on a non-ok response', async () => {
     mockFetch.mockResolvedValueOnce(makeResponse({ error: 'bad' }, 401));
     await expect(authApi.signIn('x@y.com', 'wrong123')).rejects.toThrow('401');
+  });
+
+  it('captures the set-auth-token header into the token store on signIn', async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeResponse({ user: { id: '2', email: 'b@c.com', name: 'b' } }, 200, {
+        'set-auth-token': 'sess-tok',
+      }),
+    );
+    await authApi.signIn('b@c.com', 'secret12');
+    expect(mockSet).toHaveBeenCalledWith('sess-tok');
+  });
+
+  it('captures the set-auth-token header into the token store on signUp', async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeResponse({ user: { id: '1', email: 'a@b.com', name: 'a' } }, 200, {
+        'set-auth-token': 'sess-tok',
+      }),
+    );
+    await authApi.signUp('a@b.com', 'pass1234');
+    expect(mockSet).toHaveBeenCalledWith('sess-tok');
+  });
+
+  it('does not store a token when no set-auth-token header is present', async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeResponse({ user: { id: '2', email: 'b@c.com', name: 'b' } }),
+    );
+    await authApi.signIn('b@c.com', 'secret12');
+    expect(mockSet).not.toHaveBeenCalled();
+  });
+
+  it('clears the stored token on signOut', async () => {
+    mockFetch.mockResolvedValueOnce(makeResponse(null));
+    await authApi.signOut();
+    expect(mockClear).toHaveBeenCalled();
+  });
+
+  it('clears the stored token even if sign-out request fails', async () => {
+    mockFetch.mockResolvedValueOnce(makeResponse({ error: 'nope' }, 500));
+    await expect(authApi.signOut()).resolves.toBeUndefined();
+    expect(mockClear).toHaveBeenCalled();
   });
 });

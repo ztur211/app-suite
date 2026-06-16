@@ -127,6 +127,7 @@ services:
       BETTER_AUTH_URL: https://auth.${THINGS_DOMAIN}
       THINGS_DOMAIN: ${THINGS_DOMAIN}
       AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      WEB_ORIGINS: ${WEB_ORIGINS:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/health']
       interval: 30s
@@ -146,6 +147,7 @@ services:
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET:?set SERVICE_TOKEN_SECRET}
       THINGS_DOMAIN: ${THINGS_DOMAIN}
       AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      WEB_ORIGINS: ${WEB_ORIGINS:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3002/health']
       interval: 30s
@@ -169,6 +171,7 @@ services:
       TMP_AUDIO_DIR: /tmp/things-say-audio
       THINGS_DOMAIN: ${THINGS_DOMAIN}
       AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      WEB_ORIGINS: ${WEB_ORIGINS:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3003/health']
       interval: 30s
@@ -189,6 +192,7 @@ services:
       SAY_API_URL: http://api-say:3003
       THINGS_DOMAIN: ${THINGS_DOMAIN}
       AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      WEB_ORIGINS: ${WEB_ORIGINS:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3004/health']
       interval: 30s
@@ -209,6 +213,7 @@ services:
       SAY_API_URL: http://api-say:3003
       THINGS_DOMAIN: ${THINGS_DOMAIN}
       AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      WEB_ORIGINS: ${WEB_ORIGINS:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3005/health']
       interval: 30s
@@ -228,6 +233,7 @@ services:
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET}
       THINGS_DOMAIN: ${THINGS_DOMAIN}
       AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      WEB_ORIGINS: ${WEB_ORIGINS:-}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3006/health']
       interval: 30s

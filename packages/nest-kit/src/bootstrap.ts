@@ -11,7 +11,15 @@ export interface BootstrapOptions {
 /** Shared NestJS bootstrap: create the app, enable CORS for trusted web origins, listen, log. */
 export async function bootstrapThingsApp(opts: BootstrapOptions): Promise<INestApplication> {
   const app = await NestFactory.create(opts.module);
-  app.enableCors({ origin: trustedWebOrigins(), credentials: true });
+  app.enableCors({
+    origin: trustedWebOrigins(),
+    credentials: true,
+    // Cross-origin JS can only read response headers that are explicitly
+    // exposed. Better Auth's bearer plugin returns the session token in
+    // `set-auth-token` on sign-in/up; the web client must read it (see
+    // @things/web-kit auth-api) to authenticate cross-site (Vercel → API).
+    exposedHeaders: ['set-auth-token'],
+  });
   await app.listen(opts.port);
   console.warn(`[${opts.name}] listening on http://localhost:${opts.port}`);
   return app;

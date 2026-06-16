@@ -28,6 +28,48 @@ describe('trustedWebOrigins', () => {
       'http://localhost:8085',
     ]);
   });
+
+  it('includes WEB_ORIGINS entries (trimmed, empties dropped)', () => {
+    const origins = trustedWebOrigins({
+      WEB_ORIGINS: 'https://things-do.vercel.app, https://things-say.vercel.app , ,',
+    });
+    expect(origins).toEqual(
+      expect.arrayContaining(['https://things-do.vercel.app', 'https://things-say.vercel.app']),
+    );
+    expect(origins).not.toContain('');
+  });
+
+  it('orders results: prod subdomains, then WEB_ORIGINS, then dev origins', () => {
+    expect(
+      trustedWebOrigins({
+        THINGS_DOMAIN: 'things.app',
+        WEB_ORIGINS: 'https://things-do.vercel.app',
+      }),
+    ).toEqual([
+      'https://do.things.app',
+      'https://say.things.app',
+      'https://buy.things.app',
+      'https://eat.things.app',
+      'https://send.things.app',
+      'https://things-do.vercel.app',
+      'http://localhost:8081',
+      'http://localhost:8082',
+      'http://localhost:8083',
+      'http://localhost:8084',
+      'http://localhost:8085',
+    ]);
+  });
+
+  it('includes WEB_ORIGINS even when THINGS_DOMAIN is unset', () => {
+    expect(trustedWebOrigins({ WEB_ORIGINS: 'https://things-do.vercel.app' })).toEqual([
+      'https://things-do.vercel.app',
+      'http://localhost:8081',
+      'http://localhost:8082',
+      'http://localhost:8083',
+      'http://localhost:8084',
+      'http://localhost:8085',
+    ]);
+  });
 });
 
 describe('authCookieDomain', () => {

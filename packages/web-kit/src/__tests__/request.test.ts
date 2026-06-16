@@ -1,4 +1,10 @@
 import { apiRequest } from '../request';
+import { tokenStore } from '../token-store';
+
+jest.mock('../token-store', () => ({
+  tokenStore: { get: jest.fn(), set: jest.fn(), clear: jest.fn() },
+}));
+const mockToken = tokenStore.get as jest.Mock;
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -13,7 +19,11 @@ function makeResponse(body: unknown, status = 200) {
   } as unknown as Response;
 }
 
-beforeEach(() => mockFetch.mockReset());
+beforeEach(() => {
+  mockFetch.mockReset();
+  mockToken.mockReset();
+  mockToken.mockReturnValue(null);
+});
 
 describe('apiRequest', () => {
   it('resolves parsed JSON and sends credentials + JSON content-type', async () => {
@@ -38,5 +48,21 @@ describe('apiRequest', () => {
   it('throws "<status> <statusText>: <body>" on a non-ok response', async () => {
     mockFetch.mockResolvedValueOnce(makeResponse({ error: 'bad' }, 401));
     await expect(apiRequest('http://x/y')).rejects.toThrow('401 Error: {"error":"bad"}');
+  });
+
+  it('attaches Authorization: Bearer when a token is stored', async () => {
+    mockToken.mockReturnValue('tok-xyz');
+    mockFetch.mockResolvedValueOnce(makeResponse({}));
+    await apiRequest('http://x/y');
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)['Authorization']).toBe('Bearer tok-xyz');
+  });
+
+  it('omits Authorization when no token is stored', async () => {
+    mockToken.mockReturnValue(null);
+    mockFetch.mockResolvedValueOnce(makeResponse({}));
+    await apiRequest('http://x/y');
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)['Authorization']).toBeUndefined();
   });
 });
