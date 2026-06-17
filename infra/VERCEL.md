@@ -102,3 +102,62 @@ apps (the API workflow in `.github/workflows/deploy.yml` is separate).
    `set-auth-token` header and later API calls send `Authorization: Bearer …`.
 3. Confirm it works in **Safari** as well as Chrome — that proves auth doesn't
    secretly depend on (now-blocked) third-party cookies.
+
+## 6. Watch the deploy: the app-to-app tour
+
+`scripts/tour.mjs` drives a real (headed) browser through all five apps in
+sequence — Do → Say → Buy → Eat → Send — over a 60–90s span so you can watch a
+post-deploy walkthrough. It **logs in once** on Do, captures the Bearer session
+token, then for each remaining app confirms that one token is accepted: it seeds
+the token into that origin and asserts the app's boot `get-session` returns the
+user (no bounce to `/login`).
+
+> Each app is its own Vercel **origin**, and `localStorage` is per-origin with no
+> SSO redirect between web apps — so "the session carries" is demonstrated by
+> reusing the **one** captured token against every app's shared auth backend,
+> which is exactly what cross-site Bearer auth promises. The tour does not fake a
+> handoff the apps don't implement.
+
+```bash
+# One-time: install the Playwright browser.
+npx playwright install chromium
+
+# Sign in with an existing account and tour all five (defaults to 75s, headed):
+TOUR_EMAIL=you@example.com TOUR_PASSWORD='…' npm run tour
+
+# Useful flags:
+npm run tour -- --seconds 90          # stretch the tour to 90s (clamped to 60-90)
+npm run tour -- --signup              # create the account instead of signing in
+npm run tour -- --shots ./tour-shots  # screenshot each app
+npm run tour -- --headless            # CI / no display (or wrap headed in `xvfb-run`)
+npm run tour -- --dry-run             # print the plan, launch nothing
+```
+
+Targets default to `https://things-<app>.vercel.app`. Override any with
+`TOUR_DO_URL` / `TOUR_SAY_URL` / `TOUR_BUY_URL` / `TOUR_EAT_URL` / `TOUR_SEND_URL`
+(e.g. custom domains). The tour exits non-zero if any app fails to carry the
+session, so it doubles as a scriptable acceptance check.
+
+### Rehearse against a local stack first (`--local`)
+
+Before the apps are even on Vercel, point the tour at local Expo dev servers
+with `--local`. Bring up the APIs, then start each web app on a fixed port in
+suite order (do → send):
+
+```bash
+npm run dev:db && npm run dev:api           # Postgres + the 6 APIs (3001-3006)
+npm run dev -w apps/web-do   -- --port 8081
+npm run dev -w apps/web-say  -- --port 8082
+npm run dev -w apps/web-buy  -- --port 8083
+npm run dev -w apps/web-eat  -- --port 8084
+npm run dev -w apps/web-send -- --port 8085
+
+TOUR_EMAIL=you@example.com TOUR_PASSWORD='…' npm run tour -- --local
+```
+
+`--local` maps web-do→8081 … web-send→8085 (change the first port with
+`--local-base <port>`, or any single app with `TOUR_<APP>_URL`). Locally the
+apps call `localhost:3001-3006`; the captured token still drives every app, and
+because all five share the one `localhost:3001` auth backend the same-site
+session cookie carries too — so a green `--local` run is a faithful dress
+rehearsal for the Vercel pass.
