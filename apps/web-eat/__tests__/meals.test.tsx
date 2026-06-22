@@ -16,6 +16,7 @@ jest.mock('../lib/api', () => ({
     update: jest.fn(),
     remove: jest.fn(),
     sync: jest.fn(),
+    search: jest.fn(),
   },
 }));
 
@@ -48,6 +49,8 @@ beforeEach(() => {
     error: null,
     syncing: false,
     syncSummary: null,
+    results: [],
+    searching: false,
   });
   (useAuth as jest.Mock).mockReturnValue({
     user: { id: 'u1', email: 'test@example.com', name: 'test' },
@@ -176,5 +179,75 @@ describe('Meals screen', () => {
       fireEvent.press(out);
     });
     expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('searches recipes and renders the results', async () => {
+    mockApi.search.mockResolvedValueOnce({
+      kind: 'recipe',
+      results: [
+        {
+          id: 'r1',
+          name: 'Teriyaki Chicken',
+          imageUrl: null,
+          kind: 'recipe',
+          detail: 'Chicken · Japanese',
+          url: null,
+          source: 'fake',
+        },
+      ],
+    });
+    const { getByTestId, findByText } = render(<Meals />);
+    await waitFor(() => expect(getByTestId('search-input')).toBeTruthy());
+    fireEvent.changeText(getByTestId('search-input'), 'chicken');
+    await act(async () => {
+      fireEvent.press(getByTestId('search-btn'));
+    });
+    expect(mockApi.search).toHaveBeenCalledWith('chicken', 'recipe');
+    expect(await findByText('Teriyaki Chicken')).toBeTruthy();
+  });
+
+  it('searches restaurants when the restaurant toggle is selected', async () => {
+    mockApi.search.mockResolvedValueOnce({ kind: 'restaurant', results: [] });
+    const { getByTestId } = render(<Meals />);
+    await waitFor(() => expect(getByTestId('search-input')).toBeTruthy());
+    fireEvent.changeText(getByTestId('search-input'), 'sushi');
+    await act(async () => {
+      fireEvent.press(getByTestId('search-kind-restaurant'));
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('search-btn'));
+    });
+    expect(mockApi.search).toHaveBeenCalledWith('sushi', 'restaurant');
+  });
+
+  it('adds a search result to the meal list', async () => {
+    mockApi.search.mockResolvedValueOnce({
+      kind: 'recipe',
+      results: [
+        {
+          id: 'r1',
+          name: 'Teriyaki Chicken',
+          imageUrl: null,
+          kind: 'recipe',
+          detail: null,
+          url: null,
+          source: 'fake',
+        },
+      ],
+    });
+    mockApi.create.mockResolvedValueOnce(makeMeal({ id: 'new', name: 'Teriyaki Chicken' }));
+    const { getByTestId, findByTestId } = render(<Meals />);
+    await waitFor(() => expect(getByTestId('search-input')).toBeTruthy());
+    fireEvent.changeText(getByTestId('search-input'), 'chicken');
+    await act(async () => {
+      fireEvent.press(getByTestId('search-btn'));
+    });
+    const addBtn = await findByTestId('add-result-r1');
+    await act(async () => {
+      fireEvent.press(addBtn);
+    });
+    expect(mockApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Teriyaki Chicken', kind: 'recipe' }),
+    );
   });
 });

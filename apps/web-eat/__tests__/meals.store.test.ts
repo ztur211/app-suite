@@ -1,6 +1,6 @@
 import { mealsApi } from '../lib/api';
 import { useMeals } from '../store/meals.store';
-import type { MealItem } from '../lib/types';
+import type { DiscoveryResult, MealItem } from '../lib/types';
 
 jest.mock('../lib/api', () => ({
   mealsApi: {
@@ -9,6 +9,7 @@ jest.mock('../lib/api', () => ({
     update: jest.fn(),
     remove: jest.fn(),
     sync: jest.fn(),
+    search: jest.fn(),
   },
 }));
 
@@ -27,6 +28,17 @@ const makeMeal = (overrides: Partial<MealItem> = {}): MealItem => ({
   ...overrides,
 });
 
+const makeResult = (overrides: Partial<DiscoveryResult> = {}): DiscoveryResult => ({
+  id: 'r1',
+  name: 'Tacos',
+  imageUrl: null,
+  kind: 'recipe',
+  detail: null,
+  url: null,
+  source: 'fake',
+  ...overrides,
+});
+
 beforeEach(() => {
   useMeals.setState({
     meals: [],
@@ -34,6 +46,8 @@ beforeEach(() => {
     error: null,
     syncing: false,
     syncSummary: null,
+    results: [],
+    searching: false,
   });
   jest.clearAllMocks();
 });
@@ -89,5 +103,44 @@ describe('useMeals store', () => {
     useMeals.setState({ meals: [a] });
     expect(useMeals.getState().byId('a')).toBe(a);
     expect(useMeals.getState().byId('missing')).toBeUndefined();
+  });
+
+  it('search() stores results from the {kind, results} envelope', async () => {
+    const results = [makeResult({ id: 'r1' }), makeResult({ id: 'r2' })];
+    mockApi.search.mockResolvedValueOnce({ kind: 'recipe', results });
+
+    await useMeals.getState().search('tacos', 'recipe');
+
+    expect(mockApi.search).toHaveBeenCalledWith('tacos', 'recipe');
+    expect(useMeals.getState().results).toEqual(results);
+    expect(useMeals.getState().searching).toBe(false);
+  });
+
+  it('search() stores an error on failure', async () => {
+    mockApi.search.mockRejectedValueOnce(new Error('Yelp down'));
+    await useMeals.getState().search('sushi', 'restaurant');
+    expect(useMeals.getState().error).toBe('Yelp down');
+    expect(useMeals.getState().searching).toBe(false);
+  });
+
+  it('addResult() creates a meal from the result and drops it from results', async () => {
+    const r = makeResult({
+      id: 'r1',
+      name: 'Teriyaki Chicken',
+      kind: 'recipe',
+      detail: 'Chicken · Japanese',
+    });
+    useMeals.setState({ results: [r, makeResult({ id: 'r2' })] });
+    mockApi.create.mockResolvedValueOnce(makeMeal({ id: 'new', name: 'Teriyaki Chicken' }));
+
+    await useMeals.getState().addResult(r);
+
+    expect(mockApi.create).toHaveBeenCalledWith({
+      name: 'Teriyaki Chicken',
+      kind: 'recipe',
+      notes: 'Chicken · Japanese',
+    });
+    expect(useMeals.getState().meals.map((m) => m.id)).toContain('new');
+    expect(useMeals.getState().results.map((x) => x.id)).toEqual(['r2']);
   });
 });

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { mealsApi, type MealCreate, type MealUpdate } from '../lib/api';
-import type { MealItem } from '../lib/types';
+import { mealsApi, type DiscoveryKind, type MealCreate, type MealUpdate } from '../lib/api';
+import type { DiscoveryResult, MealItem } from '../lib/types';
 
 export interface MealsState {
   meals: MealItem[];
@@ -8,11 +8,17 @@ export interface MealsState {
   error: string | null;
   syncing: boolean;
   syncSummary: { created: number; consumed: number } | null;
+  results: DiscoveryResult[];
+  searching: boolean;
   refresh: () => Promise<void>;
   create: (data: MealCreate) => Promise<void>;
   update: (id: string, partial: MealUpdate) => Promise<void>;
   remove: (id: string) => Promise<void>;
   sync: () => Promise<void>;
+  /** Discover recipes or restaurants; populates `results`. */
+  search: (query: string, kind: DiscoveryKind) => Promise<void>;
+  /** Add a discovery result to the list, then drop it from `results`. */
+  addResult: (result: DiscoveryResult) => Promise<void>;
   byId: (id: string) => MealItem | undefined;
 }
 
@@ -22,6 +28,8 @@ export const useMeals = create<MealsState>((set, get) => ({
   error: null,
   syncing: false,
   syncSummary: null,
+  results: [],
+  searching: false,
   refresh: async () => {
     set({ loading: true, error: null });
     try {
@@ -56,6 +64,19 @@ export const useMeals = create<MealsState>((set, get) => ({
     } catch (e) {
       set({ error: (e as Error).message, syncing: false });
     }
+  },
+  search: async (query, kind) => {
+    set({ searching: true, error: null });
+    try {
+      const { results } = await mealsApi.search(query, kind);
+      set({ results, searching: false });
+    } catch (e) {
+      set({ error: (e as Error).message, searching: false });
+    }
+  },
+  addResult: async (result) => {
+    await get().create({ name: result.name, kind: result.kind, notes: result.detail });
+    set((state) => ({ results: state.results.filter((r) => r.id !== result.id) }));
   },
   byId: (id) => get().meals.find((t) => t.id === id),
 }));

@@ -34,9 +34,25 @@ function filterMeals(meals: MealItem[], status: MealStatus): MealItem[] {
 export default function Meals() {
   const router = useRouter();
   const { signOut, user } = useAuth();
-  const { meals, loading, error, syncing, syncSummary, refresh, create, update, remove, sync } =
-    useMeals();
+  const {
+    meals,
+    loading,
+    error,
+    syncing,
+    syncSummary,
+    results,
+    searching,
+    refresh,
+    create,
+    update,
+    remove,
+    sync,
+    search,
+    addResult,
+  } = useMeals();
   const [filter, setFilter] = useState<MealStatus>('active');
+  const [query, setQuery] = useState('');
+  const [searchKind, setSearchKind] = useState<'recipe' | 'restaurant'>('recipe');
 
   const { control, handleSubmit, reset } = useForm<NewMealForm>({
     resolver: zodResolver(newMealSchema),
@@ -56,6 +72,16 @@ export default function Meals() {
 
   const toggleTried = (m: MealItem) =>
     update(m.id, { status: m.status === 'tried' ? 'active' : 'tried' });
+
+  const onSearch = async () => {
+    const q = query.trim();
+    if (q) await search(q, searchKind);
+  };
+
+  const searchKinds: { key: 'recipe' | 'restaurant'; label: string }[] = [
+    { key: 'recipe', label: 'Recipes' },
+    { key: 'restaurant', label: 'Restaurants' },
+  ];
 
   return (
     <View style={{ flex: 1, padding: tokens.space[6], gap: tokens.space[4] }}>
@@ -118,6 +144,76 @@ export default function Meals() {
             )}
           />
           <Button label="Add" onPress={add} variant="primary" testID="meal-add-btn" />
+        </View>
+      </Card>
+
+      <Card>
+        <View style={{ gap: tokens.space[2] }}>
+          <View style={{ flexDirection: 'row', gap: tokens.space[2] }} testID="search-kind-row">
+            {searchKinds.map(({ key, label }) => (
+              <Pressable
+                key={key}
+                onPress={() => setSearchKind(key)}
+                testID={`search-kind-${key}`}
+                style={{
+                  paddingVertical: tokens.space[2],
+                  paddingHorizontal: tokens.space[3],
+                  borderRadius: tokens.radius.full,
+                  backgroundColor:
+                    searchKind === key ? tokens.colors.apps.eat : tokens.colors.surface.sunken,
+                }}
+              >
+                <Heading level={4}>{label}</Heading>
+              </Pressable>
+            ))}
+          </View>
+          <View style={{ flexDirection: 'row', gap: tokens.space[2], alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                placeholder={searchKind === 'recipe' ? 'Find a recipe…' : 'Find a restaurant…'}
+                value={query}
+                onChangeText={setQuery}
+                onSubmitEditing={onSearch}
+                testID="search-input"
+              />
+            </View>
+            <Button
+              label={searching ? 'Finding…' : 'Find'}
+              onPress={onSearch}
+              variant="secondary"
+              testID="search-btn"
+            />
+          </View>
+          {searching ? (
+            <ActivityIndicator color={tokens.colors.apps.eat} testID="searching" />
+          ) : null}
+          {results.length > 0 ? (
+            <View style={{ gap: tokens.space[2] }} testID="search-results">
+              {results.map((r) => (
+                <View
+                  key={r.id}
+                  testID={`result-${r.id}`}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: tokens.space[2],
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Heading level={4}>{r.name}</Heading>
+                    {r.detail ? <Heading level={4}>{r.detail}</Heading> : null}
+                  </View>
+                  <Button
+                    label="Add"
+                    onPress={() => addResult(r)}
+                    variant="primary"
+                    testID={`add-result-${r.id}`}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
       </Card>
 

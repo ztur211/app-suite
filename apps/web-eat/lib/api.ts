@@ -1,5 +1,7 @@
 import { apiRequest } from '@things/web-kit';
-import type { MealItem, MealKind, MealStatus } from './types';
+import type { DiscoveryResult, MealItem, MealKind, MealStatus } from './types';
+
+export type DiscoveryKind = 'recipe' | 'restaurant';
 
 const EAT_URL = process.env.EXPO_PUBLIC_EAT_URL ?? 'http://localhost:3005';
 
@@ -32,4 +34,9 @@ export const mealsApi = {
     apiRequest<{ ok: boolean }>(`${EAT_URL}/meals/${id}`, { method: 'DELETE' }),
   sync: () =>
     apiRequest<{ created: number; consumed: number }>(`${EAT_URL}/sync`, { method: 'POST' }),
+  search: (query: string, kind: DiscoveryKind, location?: string) =>
+    apiRequest<{ kind: DiscoveryKind; results: DiscoveryResult[] }>(`${EAT_URL}/meals/search`, {
+      method: 'POST',
+      body: JSON.stringify({ query, kind, location }),
+    }),
 };

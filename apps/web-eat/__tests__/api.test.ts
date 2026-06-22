@@ -59,4 +59,13 @@ describe('mealsApi', () => {
     expect(init.method).toBe('POST');
     expect(result).toEqual({ created: 1, consumed: 1 });
   });
+
+  it('search calls POST /meals/search with query + kind', async () => {
+    mockFetch.mockResolvedValueOnce(makeResponse({ kind: 'recipe', results: [] }));
+    await mealsApi.search('chicken', 'recipe');
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://localhost:3005/meals/search');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ query: 'chicken', kind: 'recipe' });
+  });
 });

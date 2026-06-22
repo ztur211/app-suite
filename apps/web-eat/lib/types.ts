@@ -14,3 +14,14 @@ export interface MealItem {
   createdAt: string;
   updatedAt: string;
 }
+
+/** A recipe/restaurant hit returned by POST /meals/search. */
+export interface DiscoveryResult {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  kind: 'recipe' | 'restaurant';
+  detail: string | null;
+  url: string | null;
+  source: string;
+}
