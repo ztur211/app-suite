@@ -6,15 +6,26 @@ export const envSchema = serviceEnvSchema.extend({
   /** Base URL of api-say (used by SaySdk for pull-from-pending). */
   SAY_API_URL: z.string().url(),
   /**
-   * Product-search providers (all optional). With eBay creds, /items/search
-   * uses the eBay Browse API; otherwise it falls back to keyless Open Food
-   * Facts. See search/product-search.factory.ts.
+   * Product-search stores (all optional). Every store whose creds are present
+   * is searched and the results are merged; with none set, /items/search falls
+   * back to keyless Open Food Facts. See search/product-search.factory.ts.
    */
   EBAY_CLIENT_ID: z.string().optional(),
   EBAY_CLIENT_SECRET: z.string().optional(),
   EBAY_API_BASE: z.string().url().optional(),
   EBAY_OAUTH_SCOPE: z.string().optional(),
   OFF_API_BASE: z.string().url().optional(),
+  // Best Buy (electronics) — simple key.
+  BESTBUY_API_KEY: z.string().optional(),
+  BESTBUY_API_BASE: z.string().url().optional(),
+  // Etsy (handmade/vintage) — app keystring, public listing search.
+  ETSY_API_KEY: z.string().optional(),
+  ETSY_API_BASE: z.string().url().optional(),
+  // AliExpress affiliate — signed requests (app key + secret), approval-gated.
+  ALIEXPRESS_APP_KEY: z.string().optional(),
+  ALIEXPRESS_APP_SECRET: z.string().optional(),
+  ALIEXPRESS_TRACKING_ID: z.string().optional(),
+  ALIEXPRESS_API_BASE: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
