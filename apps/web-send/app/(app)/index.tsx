@@ -18,9 +18,12 @@ const newMessageSchema = z.object({
 
 type NewMessageForm = z.infer<typeof newMessageSchema>;
 
-const statusLabels: Record<'draft' | 'sent', string> = {
+type Filter = 'draft' | 'sent' | 'inbox';
+
+const filterLabels: Record<Filter, string> = {
   draft: 'Drafts',
   sent: 'Sent',
+  inbox: 'Inbox',
 };
 
 const channelLabels: Record<MessageChannel, string> = {
@@ -30,15 +33,31 @@ const channelLabels: Record<MessageChannel, string> = {
   telegram: 'Telegram',
 };
 
-function filterMessages(messages: Message[], status: 'draft' | 'sent'): Message[] {
-  return messages.filter((m) => m.status === status);
+function filterMessages(messages: Message[], filter: Filter): Message[] {
+  if (filter === 'inbox') return messages.filter((m) => m.kind === 'inbound');
+  return messages.filter((m) => m.kind === 'outbound' && m.status === filter);
 }
 
 export default function Messages() {
   const router = useRouter();
   const { signOut, user } = useAuth();
-  const { messages, loading, error, refresh, create, update, remove } = useMessages();
-  const [filter, setFilter] = useState<'draft' | 'sent'>('draft');
+  const {
+    messages,
+    loading,
+    error,
+    syncing,
+    syncSummary,
+    telegramChatId,
+    refresh,
+    create,
+    update,
+    remove,
+    send,
+    sync,
+    linkTelegram,
+  } = useMessages();
+  const [filter, setFilter] = useState<Filter>('draft');
+  const [tgChat, setTgChat] = useState('');
 
   const { control, handleSubmit, reset, watch } = useForm<NewMessageForm>({
     resolver: zodResolver(newMessageSchema),
@@ -68,11 +87,52 @@ export default function Messages() {
     <View style={{ flex: 1, padding: tokens.space[6], gap: tokens.space[4] }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Heading level={1}>Messages</Heading>
-        <Pressable onPress={signOut} testID="sign-out">
-          <Heading level={4}>Sign out</Heading>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: tokens.space[3], alignItems: 'center' }}>
+          <Pressable onPress={sync} disabled={syncing} testID="sync-btn">
+            <Heading level={4}>{syncing ? 'Syncing…' : 'Sync'}</Heading>
+          </Pressable>
+          <Pressable onPress={signOut} testID="sign-out">
+            <Heading level={4}>Sign out</Heading>
+          </Pressable>
+        </View>
       </View>
       <Heading level={4}>{user?.email}</Heading>
+
+      {syncSummary && syncSummary.inboundCreated > 0 ? (
+        <Card testID="sync-summary">
+          <Heading level={4}>
+            Pulled {syncSummary.inboundCreated} new message
+            {syncSummary.inboundCreated === 1 ? '' : 's'} from Telegram
+          </Heading>
+        </Card>
+      ) : null}
+
+      <Card>
+        <View style={{ gap: tokens.space[2] }}>
+          <Heading level={4}>
+            {telegramChatId ? `Telegram connected: ${telegramChatId}` : 'Connect Telegram'}
+          </Heading>
+          <View style={{ flexDirection: 'row', gap: tokens.space[2], alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                placeholder="Your Telegram chat id"
+                value={tgChat}
+                onChangeText={setTgChat}
+                testID="telegram-chatid-input"
+              />
+            </View>
+            <Button
+              label="Connect"
+              onPress={() => {
+                const c = tgChat.trim();
+                if (c) linkTelegram(c);
+              }}
+              variant="secondary"
+              testID="telegram-link-btn"
+            />
+          </View>
+        </View>
+      </Card>
 
       <Card>
         <View style={{ gap: tokens.space[3] }}>
@@ -153,7 +213,7 @@ export default function Messages() {
         accessibilityRole="tablist"
         testID="filter-tabs"
       >
-        {(['draft', 'sent'] as const).map((s) => (
+        {(Object.keys(filterLabels) as Filter[]).map((s) => (
           <Pressable
             key={s}
             onPress={() => setFilter(s)}
@@ -166,7 +226,7 @@ export default function Messages() {
                 filter === s ? tokens.colors.apps.send : tokens.colors.surface.sunken,
             }}
           >
-            <Heading level={4}>{statusLabels[s]}</Heading>
+            <Heading level={4}>{filterLabels[s]}</Heading>
           </Pressable>
         ))}
       </View>
@@ -181,11 +241,19 @@ export default function Messages() {
         <ActivityIndicator color={tokens.colors.apps.send} testID="list-loading" />
       ) : visible.length === 0 && !error ? (
         <View testID="empty-state" style={{ padding: tokens.space[6], alignItems: 'center' }}>
-          <Heading level={3}>{filter === 'sent' ? 'Nothing sent yet' : 'No drafts'}</Heading>
+          <Heading level={3}>
+            {filter === 'inbox'
+              ? 'Inbox empty'
+              : filter === 'sent'
+                ? 'Nothing sent yet'
+                : 'No drafts'}
+          </Heading>
           <Heading level={4}>
-            {filter === 'sent'
-              ? 'Messages you mark sent will show here'
-              : 'Compose a message above'}
+            {filter === 'inbox'
+              ? 'Connect Telegram and Sync to receive messages'
+              : filter === 'sent'
+                ? 'Messages you mark sent will show here'
+                : 'Compose a message above'}
           </Heading>
         </View>
       ) : (
@@ -248,9 +316,21 @@ export default function Messages() {
                     {item.recipient ? <Heading level={4}>To: {item.recipient}</Heading> : null}
                   </View>
                 </View>
-                <Pressable onPress={() => remove(item.id)} testID={`delete-${item.id}`}>
-                  <Heading level={4}>×</Heading>
-                </Pressable>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[2] }}>
+                  {item.channel === 'telegram' &&
+                  item.kind === 'outbound' &&
+                  item.status === 'draft' ? (
+                    <Button
+                      label="Send"
+                      onPress={() => send(item.id)}
+                      variant="primary"
+                      testID={`send-${item.id}`}
+                    />
+                  ) : null}
+                  <Pressable onPress={() => remove(item.id)} testID={`delete-${item.id}`}>
+                    <Heading level={4}>×</Heading>
+                  </Pressable>
+                </View>
               </View>
             </Card>
           )}

@@ -27,6 +27,7 @@
     "@things/config": "*",
     "@things/nest-kit": "*",
     "@things/types": "*",
+    "axios": "^1.7.7",
     "better-auth": "^1.6.11",
     "dotenv": "^16.4.0",
     "reflect-metadata": "^0.2.2",

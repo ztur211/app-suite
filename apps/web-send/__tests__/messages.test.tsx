@@ -15,6 +15,9 @@ jest.mock('../lib/api', () => ({
     create: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    send: jest.fn(),
+    sync: jest.fn(),
+    linkTelegram: jest.fn(),
   },
 }));
 
@@ -43,7 +46,14 @@ const makeMessage = (overrides: Partial<Message> = {}): Message => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  useMessages.setState({ messages: [], loading: false, error: null });
+  useMessages.setState({
+    messages: [],
+    loading: false,
+    error: null,
+    syncing: false,
+    syncSummary: null,
+    telegramChatId: null,
+  });
   (useAuth as jest.Mock).mockReturnValue({
     user: { id: 'u1', email: 'test@example.com', name: 'test' },
     signOut: mockSignOut,
@@ -172,5 +182,64 @@ describe('Messages screen', () => {
       fireEvent.press(out);
     });
     expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('connects a Telegram chat', async () => {
+    mockApi.linkTelegram.mockResolvedValueOnce({ ok: true, chatId: '99' });
+    const { getByTestId } = render(<Messages />);
+    await waitFor(() => expect(getByTestId('telegram-chatid-input')).toBeTruthy());
+    fireEvent.changeText(getByTestId('telegram-chatid-input'), '99');
+    await act(async () => {
+      fireEvent.press(getByTestId('telegram-link-btn'));
+    });
+    expect(mockApi.linkTelegram).toHaveBeenCalledWith('99');
+  });
+
+  it('syncs inbound messages from the header', async () => {
+    mockApi.sync.mockResolvedValueOnce({ inboundCreated: 1, processed: 1 });
+    mockApi.list
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        makeMessage({ id: 'in', kind: 'inbound', status: 'unread', body: 'yo' }),
+      ]);
+    const { findByTestId } = render(<Messages />);
+    const sync = await findByTestId('sync-btn');
+    await act(async () => {
+      fireEvent.press(sync);
+    });
+    expect(mockApi.sync).toHaveBeenCalled();
+  });
+
+  it('shows a Send button on telegram drafts and sends', async () => {
+    mockApi.list.mockResolvedValueOnce([
+      makeMessage({ id: 'tg', channel: 'telegram', status: 'draft', recipient: '99', body: 'hi' }),
+    ]);
+    mockApi.send.mockResolvedValueOnce(
+      makeMessage({ id: 'tg', channel: 'telegram', status: 'sent', recipient: '99' }),
+    );
+    const { findByTestId } = render(<Messages />);
+    const sendBtn = await findByTestId('send-tg');
+    await act(async () => {
+      fireEvent.press(sendBtn);
+    });
+    expect(mockApi.send).toHaveBeenCalledWith('tg');
+  });
+
+  it('shows inbound messages under the Inbox tab', async () => {
+    mockApi.list.mockResolvedValueOnce([
+      makeMessage({
+        id: 'in1',
+        kind: 'inbound',
+        status: 'unread',
+        channel: 'telegram',
+        subject: null,
+        body: 'incoming!',
+      }),
+    ]);
+    const { findByTestId, findByText } = render(<Messages />);
+    await act(async () => {
+      fireEvent.press(await findByTestId('tab-inbox'));
+    });
+    expect(await findByText('incoming!')).toBeTruthy();
   });
 });

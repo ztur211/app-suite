@@ -8,6 +8,9 @@ jest.mock('../lib/api', () => ({
     create: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    send: jest.fn(),
+    sync: jest.fn(),
+    linkTelegram: jest.fn(),
   },
 }));
 
@@ -29,7 +32,14 @@ const makeMessage = (overrides: Partial<Message> = {}): Message => ({
 });
 
 beforeEach(() => {
-  useMessages.setState({ messages: [], loading: false, error: null });
+  useMessages.setState({
+    messages: [],
+    loading: false,
+    error: null,
+    syncing: false,
+    syncSummary: null,
+    telegramChatId: null,
+  });
   jest.clearAllMocks();
 });
 
@@ -76,5 +86,35 @@ describe('useMessages store', () => {
     useMessages.setState({ messages: [a] });
     expect(useMessages.getState().byId('a')).toBe(a);
     expect(useMessages.getState().byId('missing')).toBeUndefined();
+  });
+
+  it('send() replaces the message with the API response', async () => {
+    useMessages.setState({
+      messages: [makeMessage({ id: 'm1', status: 'draft', channel: 'telegram' })],
+    });
+    mockApi.send.mockResolvedValueOnce(
+      makeMessage({ id: 'm1', status: 'sent', channel: 'telegram' }),
+    );
+    await useMessages.getState().send('m1');
+    expect(mockApi.send).toHaveBeenCalledWith('m1');
+    expect(useMessages.getState().messages[0].status).toBe('sent');
+  });
+
+  it('sync() pulls inbound then refreshes the list', async () => {
+    mockApi.sync.mockResolvedValueOnce({ inboundCreated: 1, processed: 2 });
+    mockApi.list.mockResolvedValueOnce([
+      makeMessage({ id: 'in', kind: 'inbound', status: 'unread' }),
+    ]);
+    await useMessages.getState().sync();
+    expect(useMessages.getState().syncSummary).toEqual({ inboundCreated: 1, processed: 2 });
+    expect(useMessages.getState().messages).toHaveLength(1);
+    expect(useMessages.getState().syncing).toBe(false);
+  });
+
+  it('linkTelegram() stores the linked chatId', async () => {
+    mockApi.linkTelegram.mockResolvedValueOnce({ ok: true, chatId: '77' });
+    await useMessages.getState().linkTelegram('77');
+    expect(mockApi.linkTelegram).toHaveBeenCalledWith('77');
+    expect(useMessages.getState().telegramChatId).toBe('77');
   });
 });

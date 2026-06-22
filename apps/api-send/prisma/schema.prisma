@@ -35,6 +35,8 @@ model Message {
   body              String
   recipient         String?
   sourceDictationId String?
+  // Provider-assigned id of a sent message (e.g. Telegram message_id), if any.
+  providerMessageId String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -42,4 +44,30 @@ model Message {
   @@index([userId, channel])
   @@index([userId, createdAt])
   @@index([userId, sourceDictationId])
+}
+
+// Maps a Things user to a Telegram chat (v1: one chat per user). Populated by
+// the manual link endpoint; used to address outbound messages and to attribute
+// inbound Telegram updates to the right user.
+model TelegramLink {
+  id       String   @id @default(cuid())
+  userId   String   @unique
+  chatId   String   @unique
+  username String?
+  linkedAt DateTime @default(now())
+
+  @@index([chatId])
+}
+
+// Dedup log + cursor for Telegram getUpdates polling. update_id is globally
+// monotonic per bot, so it both de-duplicates and advances the offset.
+model TelegramInbound {
+  id          String   @id @default(cuid())
+  updateId    BigInt   @unique
+  chatId      String
+  // The inbound Message row created for this update, if the chat was linked.
+  messageId   String?
+  processedAt DateTime @default(now())
+
+  @@index([chatId])
 }

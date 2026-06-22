@@ -50,4 +50,30 @@ describe('messagesApi', () => {
     expect(init.method).toBe('DELETE');
     expect(url).toBe('http://localhost:3006/messages/m1');
   });
+
+  it('send calls POST /messages/:id/send', async () => {
+    mockFetch.mockResolvedValueOnce(makeResponse({ id: 'm1', status: 'sent' }));
+    await messagesApi.send('m1');
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://localhost:3006/messages/m1/send');
+    expect(init.method).toBe('POST');
+  });
+
+  it('sync calls POST /messages/sync', async () => {
+    mockFetch.mockResolvedValueOnce(makeResponse({ inboundCreated: 1, processed: 1 }));
+    const r = await messagesApi.sync();
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://localhost:3006/messages/sync');
+    expect(init.method).toBe('POST');
+    expect(r).toEqual({ inboundCreated: 1, processed: 1 });
+  });
+
+  it('linkTelegram calls POST /telegram/link with chatId', async () => {
+    mockFetch.mockResolvedValueOnce(makeResponse({ ok: true, chatId: '99' }));
+    await messagesApi.linkTelegram('99');
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://localhost:3006/telegram/link');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ chatId: '99' });
+  });
 });
