@@ -45,4 +45,7 @@ export const messagesApi = {
       method: 'POST',
       body: JSON.stringify({ chatId }),
     }),
+  /** Pull SEND intents parked in Say into email drafts. */
+  syncFromSay: () =>
+    apiRequest<{ created: number; consumed: number }>(`${SEND_URL}/sync`, { method: 'POST' }),
 };

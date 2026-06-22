@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '../../prisma/generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-export type PendingDestination = 'PENDING_BUY' | 'PENDING_EAT';
+export type PendingDestination = 'PENDING_BUY' | 'PENDING_EAT' | 'PENDING_SEND';
 
 export interface PendingItem {
   dictationId: string;

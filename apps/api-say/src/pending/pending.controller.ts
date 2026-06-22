@@ -4,7 +4,9 @@ import { ServiceJwtGuard } from '@things/nest-kit';
 import { PendingService, type PendingDestination } from './pending.service';
 
 @Controller('pending')
-@UseGuards(new ServiceJwtGuard({ expectedAud: 'api-say', whitelist: ['api-buy', 'api-eat'] }))
+@UseGuards(
+  new ServiceJwtGuard({ expectedAud: 'api-say', whitelist: ['api-buy', 'api-eat', 'api-send'] }),
+)
 export class PendingController {
   constructor(private readonly svc: PendingService) {}
 

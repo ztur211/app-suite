@@ -47,6 +47,7 @@ export default function Messages() {
     error,
     syncing,
     syncSummary,
+    saySummary,
     telegramChatId,
     refresh,
     create,
@@ -55,6 +56,7 @@ export default function Messages() {
     send,
     sync,
     linkTelegram,
+    syncFromSay,
   } = useMessages();
   const [filter, setFilter] = useState<Filter>('draft');
   const [tgChat, setTgChat] = useState('');
@@ -88,6 +90,9 @@ export default function Messages() {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Heading level={1}>Messages</Heading>
         <View style={{ flexDirection: 'row', gap: tokens.space[3], alignItems: 'center' }}>
+          <Pressable onPress={syncFromSay} testID="say-pull-btn">
+            <Heading level={4}>From Say</Heading>
+          </Pressable>
           <Pressable onPress={sync} disabled={syncing} testID="sync-btn">
             <Heading level={4}>{syncing ? 'Syncing…' : 'Sync'}</Heading>
           </Pressable>
@@ -103,6 +108,14 @@ export default function Messages() {
           <Heading level={4}>
             Pulled {syncSummary.inboundCreated} new message
             {syncSummary.inboundCreated === 1 ? '' : 's'} from Telegram
+          </Heading>
+        </Card>
+      ) : null}
+
+      {saySummary && saySummary.created > 0 ? (
+        <Card testID="say-summary">
+          <Heading level={4}>
+            Pulled {saySummary.created} draft{saySummary.created === 1 ? '' : 's'} from Say Things
           </Heading>
         </Card>
       ) : null}

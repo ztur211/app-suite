@@ -11,6 +11,7 @@ jest.mock('../lib/api', () => ({
     send: jest.fn(),
     sync: jest.fn(),
     linkTelegram: jest.fn(),
+    syncFromSay: jest.fn(),
   },
 }));
 
@@ -38,6 +39,7 @@ beforeEach(() => {
     error: null,
     syncing: false,
     syncSummary: null,
+    saySummary: null,
     telegramChatId: null,
   });
   jest.clearAllMocks();
@@ -116,5 +118,15 @@ describe('useMessages store', () => {
     await useMessages.getState().linkTelegram('77');
     expect(mockApi.linkTelegram).toHaveBeenCalledWith('77');
     expect(useMessages.getState().telegramChatId).toBe('77');
+  });
+
+  it('syncFromSay() pulls Say drafts then refreshes the list', async () => {
+    mockApi.syncFromSay.mockResolvedValueOnce({ created: 2, consumed: 2 });
+    mockApi.list.mockResolvedValueOnce([
+      makeMessage({ id: 'd', channel: 'email', sourceDictationId: 'dict1' }),
+    ]);
+    await useMessages.getState().syncFromSay();
+    expect(useMessages.getState().saySummary).toEqual({ created: 2, consumed: 2 });
+    expect(useMessages.getState().messages).toHaveLength(1);
   });
 });

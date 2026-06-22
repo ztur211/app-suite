@@ -34,6 +34,7 @@ enum Destination {
   CLIPBOARD
   PENDING_BUY
   PENDING_EAT
+  PENDING_SEND
 }
 
 enum CaptureMode {

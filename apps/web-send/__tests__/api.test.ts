@@ -76,4 +76,13 @@ describe('messagesApi', () => {
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual({ chatId: '99' });
   });
+
+  it('syncFromSay calls POST /sync', async () => {
+    mockFetch.mockResolvedValueOnce(makeResponse({ created: 1, consumed: 1 }));
+    const r = await messagesApi.syncFromSay();
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://localhost:3006/sync');
+    expect(init.method).toBe('POST');
+    expect(r).toEqual({ created: 1, consumed: 1 });
+  });
 });

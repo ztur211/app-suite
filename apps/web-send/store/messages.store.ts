@@ -8,6 +8,7 @@ export interface MessagesState {
   error: string | null;
   syncing: boolean;
   syncSummary: { inboundCreated: number; processed: number } | null;
+  saySummary: { created: number; consumed: number } | null;
   telegramChatId: string | null;
   refresh: () => Promise<void>;
   create: (data: MessageCreate) => Promise<void>;
@@ -19,6 +20,8 @@ export interface MessagesState {
   sync: () => Promise<void>;
   /** Connect a Telegram chat to this account. */
   linkTelegram: (chatId: string) => Promise<void>;
+  /** Pull SEND intents from Say into email drafts, then refresh. */
+  syncFromSay: () => Promise<void>;
   byId: (id: string) => Message | undefined;
 }
 
@@ -28,6 +31,7 @@ export const useMessages = create<MessagesState>((set, get) => ({
   error: null,
   syncing: false,
   syncSummary: null,
+  saySummary: null,
   telegramChatId: null,
   refresh: async () => {
     set({ loading: true, error: null });
@@ -73,6 +77,17 @@ export const useMessages = create<MessagesState>((set, get) => ({
   linkTelegram: async (chatId) => {
     const { chatId: linked } = await messagesApi.linkTelegram(chatId);
     set({ telegramChatId: linked });
+  },
+  syncFromSay: async () => {
+    set({ error: null });
+    try {
+      const summary = await messagesApi.syncFromSay();
+      set({ saySummary: summary });
+      const messages = await messagesApi.list();
+      set({ messages });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
   },
   byId: (id) => get().messages.find((m) => m.id === id),
 }));

@@ -49,6 +49,26 @@ describe('SayPendingApi', () => {
     expect(payload.sub).toBe('u1');
   });
 
+  it('list() supports PENDING_SEND with an email payload', async () => {
+    const { sdk, mock } = makeSdk();
+    mock.onGet('/pending').reply((config) => {
+      expect((config.params as { destination: string }).destination).toBe('PENDING_SEND');
+      return [
+        200,
+        [
+          {
+            dictationId: 'd2',
+            createdAt: '2026-06-21T10:00:00Z',
+            payload: { subject: 'Hi', body: 'hello', recipientHint: 'Sarah' },
+            transcript: 'email sarah hello',
+          },
+        ],
+      ];
+    });
+    const items = await sdk.pending.list({ userId: 'u1', destination: 'PENDING_SEND' });
+    expect(items[0]?.payload).toEqual({ subject: 'Hi', body: 'hello', recipientHint: 'Sarah' });
+  });
+
   it('consume() POSTs destinationRef and authorizes with a service JWT', async () => {
     const { sdk, mock } = makeSdk();
     let capturedHeader: string | undefined;

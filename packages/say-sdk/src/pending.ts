@@ -1,13 +1,13 @@
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { signServiceToken } from '@things/auth';
-import type { ShoppingPayload, MealPayload } from '@things/types';
+import type { ShoppingPayload, MealPayload, EmailPayload } from '@things/types';
 
-export type PendingDestination = 'PENDING_BUY' | 'PENDING_EAT';
+export type PendingDestination = 'PENDING_BUY' | 'PENDING_EAT' | 'PENDING_SEND';
 
 export interface PendingItem {
   dictationId: string;
   createdAt: string;
-  payload: ShoppingPayload | MealPayload;
+  payload: ShoppingPayload | MealPayload | EmailPayload;
   transcript: string;
 }
 

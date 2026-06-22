@@ -18,6 +18,7 @@ jest.mock('../lib/api', () => ({
     send: jest.fn(),
     sync: jest.fn(),
     linkTelegram: jest.fn(),
+    syncFromSay: jest.fn(),
   },
 }));
 
@@ -52,6 +53,7 @@ beforeEach(() => {
     error: null,
     syncing: false,
     syncSummary: null,
+    saySummary: null,
     telegramChatId: null,
   });
   (useAuth as jest.Mock).mockReturnValue({
@@ -223,6 +225,21 @@ describe('Messages screen', () => {
       fireEvent.press(sendBtn);
     });
     expect(mockApi.send).toHaveBeenCalledWith('tg');
+  });
+
+  it('pulls SEND drafts from Say', async () => {
+    mockApi.syncFromSay.mockResolvedValueOnce({ created: 1, consumed: 1 });
+    mockApi.list
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        makeMessage({ id: 'd', channel: 'email', sourceDictationId: 'dict1', subject: 'From Say' }),
+      ]);
+    const { findByTestId } = render(<Messages />);
+    const btn = await findByTestId('say-pull-btn');
+    await act(async () => {
+      fireEvent.press(btn);
+    });
+    expect(mockApi.syncFromSay).toHaveBeenCalled();
   });
 
   it('shows inbound messages under the Inbox tab', async () => {
