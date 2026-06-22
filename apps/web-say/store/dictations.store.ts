@@ -10,6 +10,8 @@ export interface DictationsState {
   refresh: () => Promise<void>;
   /** Returns true on success; sets `error` and returns false on failure. */
   capture: (text: string) => Promise<boolean>;
+  /** Capture from recorded audio (voice). Same contract as `capture`. */
+  captureAudio: (audio: Blob) => Promise<boolean>;
   dispatch: (id: string) => Promise<void>;
   undoDispatch: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
@@ -34,6 +36,17 @@ export const useDictations = create<DictationsState>((set, get) => ({
     set({ creating: true, error: null });
     try {
       const { dictation } = await dictationsApi.create(text);
+      set((state) => ({ dictations: [dictation, ...state.dictations], creating: false }));
+      return true;
+    } catch (e) {
+      set({ error: (e as Error).message, creating: false });
+      return false;
+    }
+  },
+  captureAudio: async (audio) => {
+    set({ creating: true, error: null });
+    try {
+      const { dictation } = await dictationsApi.createAudio(audio);
       set((state) => ({ dictations: [dictation, ...state.dictations], creating: false }));
       return true;
     } catch (e) {

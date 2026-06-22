@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -8,6 +8,7 @@ import { Heading, Button, Card, TextInput, tokens } from '@things/design-system'
 import { useAuth } from '@things/web-kit';
 import { useDictations } from '../../store/dictations.store';
 import { intentColor, intentLabel } from '../../lib/intent';
+import { isRecordingSupported, startRecording, type AudioRecording } from '../../lib/recorder';
 import type { Dictation } from '../../lib/types';
 
 const captureSchema = z.object({
@@ -35,12 +36,17 @@ function IntentBadge({ dictation }: { dictation: Dictation }) {
 export default function Library() {
   const router = useRouter();
   const { signOut, user } = useAuth();
-  const { dictations, loading, creating, error, refresh, capture } = useDictations();
+  const { dictations, loading, creating, error, refresh, capture, captureAudio } = useDictations();
 
   const { control, handleSubmit, reset } = useForm<CaptureForm>({
     resolver: zodResolver(captureSchema),
     defaultValues: { text: '' },
   });
+
+  const recordSupported = isRecordingSupported();
+  const recordingRef = useRef<AudioRecording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordError, setRecordError] = useState<string | null>(null);
 
   useEffect(() => {
     refresh();
@@ -50,6 +56,31 @@ export default function Library() {
     const ok = await capture(text);
     if (ok) reset({ text: '' });
   });
+
+  const onToggleRecord = async () => {
+    setRecordError(null);
+    if (isRecording) {
+      const handle = recordingRef.current;
+      recordingRef.current = null;
+      setIsRecording(false);
+      if (handle) {
+        try {
+          const blob = await handle.stop();
+          await captureAudio(blob);
+        } catch (e) {
+          setRecordError((e as Error).message);
+        }
+      }
+    } else {
+      try {
+        const handle = await startRecording();
+        recordingRef.current = handle;
+        setIsRecording(true);
+      } catch (e) {
+        setRecordError((e as Error).message);
+      }
+    }
+  };
 
   return (
     <View style={{ flex: 1, padding: tokens.space[6], gap: tokens.space[4] }}>
@@ -83,6 +114,24 @@ export default function Library() {
             variant="primary"
             testID="capture-btn"
           />
+          {recordSupported ? (
+            <View style={{ gap: tokens.space[2], alignItems: 'center' }}>
+              <Button
+                label={isRecording ? 'Stop & transcribe' : '● Record'}
+                onPress={onToggleRecord}
+                variant={isRecording ? 'primary' : 'secondary'}
+                testID="record-btn"
+              />
+              {isRecording ? (
+                <ActivityIndicator color={tokens.colors.apps.say} testID="recording-indicator" />
+              ) : null}
+              {recordError ? (
+                <Heading level={4} testID="record-error">
+                  {recordError}
+                </Heading>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       </Card>
 

@@ -36,6 +36,32 @@ export const dictationsApi = {
     return res.json() as Promise<{ dictation: Dictation; proposal: Proposal }>;
   },
 
+  /**
+   * Create a voice dictation from recorded audio. captureMode 'tap'/'drive'
+   * triggers Whisper transcription on the server (api-say), then the same
+   * intent-classify + reshape pipeline as a typed capture. Sent as
+   * multipart/form-data to match the FileInterceptor('audio').
+   */
+  async createAudio(
+    audio: Blob,
+    captureMode: 'tap' | 'drive' = 'tap',
+  ): Promise<{ dictation: Dictation; proposal: Proposal }> {
+    const form = new FormData();
+    form.append('captureMode', captureMode);
+    form.append('audio', audio);
+    const res = await fetch(`${SAY_URL}/dictations`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Idempotency-Key': newIdempotencyKey() },
+      body: form,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`${res.status} ${res.statusText}: ${text}`);
+    }
+    return res.json() as Promise<{ dictation: Dictation; proposal: Proposal }>;
+  },
+
   dispatch: (id: string) =>
     apiRequest<{ dictation: Dictation; renderedEmail?: string }>(
       `${SAY_URL}/dictations/${id}/dispatch`,
