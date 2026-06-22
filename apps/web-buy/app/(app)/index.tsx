@@ -8,6 +8,7 @@ import { Heading, Button, Card, TextInput, tokens } from '@things/design-system'
 import { useAuth } from '@things/web-kit';
 import { useItems } from '../../store/items.store';
 import type { ShoppingItem } from '../../lib/types';
+import { storeLabel } from '../../lib/stores';
 
 const newItemSchema = z.object({
   title: z.string().trim().min(1, 'Enter an item'),
@@ -152,14 +153,26 @@ export default function Items() {
                 >
                   <View style={{ flex: 1 }}>
                     <Heading level={4}>{r.title}</Heading>
-                    {r.price ? (
-                      <Heading level={4}>
-                        {r.price.currency} {r.price.amount}
-                        {r.seller ? ` · ${r.seller}` : ''}
-                      </Heading>
-                    ) : r.seller ? (
-                      <Heading level={4}>{r.seller}</Heading>
-                    ) : null}
+                    <View
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[2] }}
+                    >
+                      <View
+                        testID={`result-store-${r.id}`}
+                        style={{
+                          paddingVertical: tokens.space[1],
+                          paddingHorizontal: tokens.space[2],
+                          borderRadius: tokens.radius.full,
+                          backgroundColor: tokens.colors.surface.sunken,
+                        }}
+                      >
+                        <Heading level={4}>{storeLabel(r)}</Heading>
+                      </View>
+                      {r.price ? (
+                        <Heading level={4}>
+                          {r.price.currency} {r.price.amount}
+                        </Heading>
+                      ) : null}
+                    </View>
                   </View>
                   <Button
                     label="Add"

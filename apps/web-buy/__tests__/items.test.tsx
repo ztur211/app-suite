@@ -223,4 +223,36 @@ describe('Items screen', () => {
     });
     expect(mockApi.create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Oat Milk' }));
   });
+
+  it('shows the merchant/store on each search result', async () => {
+    mockApi.search.mockResolvedValueOnce([
+      {
+        id: 's1',
+        title: 'Air Fryer',
+        imageUrl: null,
+        price: { amount: 99.99, currency: 'USD' },
+        url: null,
+        seller: 'Walmart',
+        source: 'serpapi',
+      },
+      {
+        id: 's2',
+        title: 'Headphones',
+        imageUrl: null,
+        price: null,
+        url: null,
+        seller: 'Sony',
+        source: 'bestbuy',
+      },
+    ]);
+    const { getByTestId, findByText, findByTestId } = render(<Items />);
+    await waitFor(() => expect(getByTestId('search-input')).toBeTruthy());
+    fireEvent.changeText(getByTestId('search-input'), 'gadgets');
+    await act(async () => {
+      fireEvent.press(getByTestId('search-btn'));
+    });
+    expect(await findByTestId('result-store-s1')).toBeTruthy();
+    expect(await findByText('Walmart')).toBeTruthy(); // SerpApi -> real merchant
+    expect(await findByText('Best Buy')).toBeTruthy(); // bestbuy source -> friendly label
+  });
 });

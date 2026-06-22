@@ -55,6 +55,17 @@ export function createProductSearchProvider(
       }),
     );
   }
+  }
+  if (env['ALIEXPRESS_APP_KEY'] && env['ALIEXPRESS_APP_SECRET']) {
+    providers.push(
+      new AliexpressProductSearchProvider({
+        appKey: env['ALIEXPRESS_APP_KEY'],
+        appSecret: env['ALIEXPRESS_APP_SECRET'],
+        base: env['ALIEXPRESS_API_BASE'],
+        trackingId: env['ALIEXPRESS_TRACKING_ID'],
+      }),
+    );
+  }
 
   if (env['KROGER_CLIENT_ID'] && env['KROGER_CLIENT_SECRET']) {
     providers.push(
