@@ -2,6 +2,7 @@ import { createProductSearchProvider } from '../product-search.factory';
 import { EbayProductSearchProvider } from '../ebay-product-search.provider';
 import { BestBuyProductSearchProvider } from '../bestbuy-product-search.provider';
 import { OpenFoodFactsProductSearchProvider } from '../openfoodfacts-product-search.provider';
+import { SerpApiProductSearchProvider } from '../serpapi-product-search.provider';
 import { MultiProductSearchProvider } from '../multi-product-search.provider';
 
 describe('createProductSearchProvider', () => {
@@ -30,5 +31,21 @@ describe('createProductSearchProvider', () => {
   it('merges when multiple stores are configured', () => {
     const provider = createProductSearchProvider({ BESTBUY_API_KEY: 'k', ETSY_API_KEY: 'e' });
     expect(provider).toBeInstanceOf(MultiProductSearchProvider);
+  });
+
+  it('includes Kroger (needs both halves) and SerpApi when configured', () => {
+    expect(createProductSearchProvider({ KROGER_CLIENT_ID: 'c' })).toBeInstanceOf(
+      OpenFoodFactsProductSearchProvider,
+    );
+    expect(createProductSearchProvider({ SERPAPI_KEY: 's' })).toBeInstanceOf(
+      SerpApiProductSearchProvider,
+    );
+    expect(
+      createProductSearchProvider({
+        KROGER_CLIENT_ID: 'c',
+        KROGER_CLIENT_SECRET: 's',
+        SERPAPI_KEY: 'k',
+      }),
+    ).toBeInstanceOf(MultiProductSearchProvider);
   });
 });

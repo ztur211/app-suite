@@ -4,6 +4,8 @@ import { EbayProductSearchProvider } from './ebay-product-search.provider';
 import { BestBuyProductSearchProvider } from './bestbuy-product-search.provider';
 import { EtsyProductSearchProvider } from './etsy-product-search.provider';
 import { AliexpressProductSearchProvider } from './aliexpress-product-search.provider';
+import { KrogerProductSearchProvider } from './kroger-product-search.provider';
+import { SerpApiProductSearchProvider } from './serpapi-product-search.provider';
 import { MultiProductSearchProvider } from './multi-product-search.provider';
 
 /**
@@ -42,6 +44,34 @@ export function createProductSearchProvider(
     providers.push(
       new EtsyProductSearchProvider({ apiKey: env['ETSY_API_KEY'], base: env['ETSY_API_BASE'] }),
     );
+  }
+  if (env['ALIEXPRESS_APP_KEY'] && env['ALIEXPRESS_APP_SECRET']) {
+    providers.push(
+      new AliexpressProductSearchProvider({
+        appKey: env['ALIEXPRESS_APP_KEY'],
+        appSecret: env['ALIEXPRESS_APP_SECRET'],
+        base: env['ALIEXPRESS_API_BASE'],
+        trackingId: env['ALIEXPRESS_TRACKING_ID'],
+      }),
+    );
+  }
+
+  if (env['KROGER_CLIENT_ID'] && env['KROGER_CLIENT_SECRET']) {
+    providers.push(
+      new KrogerProductSearchProvider({
+        clientId: env['KROGER_CLIENT_ID'],
+        clientSecret: env['KROGER_CLIENT_SECRET'],
+        base: env['KROGER_API_BASE'],
+        locationId: env['KROGER_LOCATION_ID'],
+      }),
+    );
+  }
+  if (env['SERPAPI_KEY']) {
+    providers.push(
+      new SerpApiProductSearchProvider({
+        apiKey: env['SERPAPI_KEY'],
+        base: env['SERPAPI_API_BASE'],
+        engine: env['SERPAPI_ENGINE'],
   }
   if (env['ALIEXPRESS_APP_KEY'] && env['ALIEXPRESS_APP_SECRET']) {
     providers.push(

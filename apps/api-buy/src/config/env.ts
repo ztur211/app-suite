@@ -26,6 +26,15 @@ export const envSchema = serviceEnvSchema.extend({
   ALIEXPRESS_APP_SECRET: z.string().optional(),
   ALIEXPRESS_TRACKING_ID: z.string().optional(),
   ALIEXPRESS_API_BASE: z.string().url().optional(),
+  // Kroger (grocery) — OAuth2 client-credentials; locationId enables pricing.
+  KROGER_CLIENT_ID: z.string().optional(),
+  KROGER_CLIENT_SECRET: z.string().optional(),
+  KROGER_LOCATION_ID: z.string().optional(),
+  KROGER_API_BASE: z.string().url().optional(),
+  // SerpApi — Google Shopping (+ walmart/amazon/home_depot via SERPAPI_ENGINE).
+  SERPAPI_KEY: z.string().optional(),
+  SERPAPI_ENGINE: z.string().optional(),
+  SERPAPI_API_BASE: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
