@@ -1,6 +1,6 @@
 import { itemsApi } from '../lib/api';
 import { useItems } from '../store/items.store';
-import type { ShoppingItem } from '../lib/types';
+import type { ProductResult, ShoppingItem } from '../lib/types';
 
 jest.mock('../lib/api', () => ({
   itemsApi: {
@@ -9,6 +9,7 @@ jest.mock('../lib/api', () => ({
     update: jest.fn(),
     remove: jest.fn(),
     sync: jest.fn(),
+    search: jest.fn(),
   },
 }));
 
@@ -27,6 +28,17 @@ const makeItem = (overrides: Partial<ShoppingItem> = {}): ShoppingItem => ({
   ...overrides,
 });
 
+const makeResult = (overrides: Partial<ProductResult> = {}): ProductResult => ({
+  id: 'p1',
+  title: 'Oat Milk',
+  imageUrl: null,
+  price: null,
+  url: null,
+  seller: null,
+  source: 'fake',
+  ...overrides,
+});
+
 beforeEach(() => {
   useItems.setState({
     items: [],
@@ -34,6 +46,8 @@ beforeEach(() => {
     error: null,
     syncing: false,
     syncSummary: null,
+    results: [],
+    searching: false,
   });
   jest.clearAllMocks();
 });
@@ -101,5 +115,35 @@ describe('useItems store', () => {
     useItems.setState({ items: [a] });
     expect(useItems.getState().byId('a')).toBe(a);
     expect(useItems.getState().byId('missing')).toBeUndefined();
+  });
+
+  it('search() stores results and clears the searching flag', async () => {
+    const results = [makeResult({ id: 'p1' }), makeResult({ id: 'p2' })];
+    mockApi.search.mockResolvedValueOnce(results);
+
+    await useItems.getState().search('milk');
+
+    expect(mockApi.search).toHaveBeenCalledWith('milk');
+    expect(useItems.getState().results).toEqual(results);
+    expect(useItems.getState().searching).toBe(false);
+  });
+
+  it('search() stores an error on failure', async () => {
+    mockApi.search.mockRejectedValueOnce(new Error('Search down'));
+    await useItems.getState().search('milk');
+    expect(useItems.getState().error).toBe('Search down');
+    expect(useItems.getState().searching).toBe(false);
+  });
+
+  it('addResult() creates an item from the result and drops it from results', async () => {
+    const r = makeResult({ id: 'p1', title: 'Oat Milk', price: { amount: 4.5, currency: 'USD' } });
+    useItems.setState({ results: [r, makeResult({ id: 'p2' })] });
+    mockApi.create.mockResolvedValueOnce(makeItem({ id: 'new', title: 'Oat Milk' }));
+
+    await useItems.getState().addResult(r);
+
+    expect(mockApi.create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Oat Milk' }));
+    expect(useItems.getState().items.map((i) => i.id)).toContain('new');
+    expect(useItems.getState().results.map((x) => x.id)).toEqual(['p2']);
   });
 });

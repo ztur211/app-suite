@@ -11,3 +11,14 @@ export interface ShoppingItem {
   createdAt: string;
   updatedAt: string;
 }
+
+/** A product hit returned by POST /items/search (provider-agnostic). */
+export interface ProductResult {
+  id: string;
+  title: string;
+  imageUrl: string | null;
+  price: { amount: number; currency: string } | null;
+  url: string | null;
+  seller: string | null;
+  source: string;
+}

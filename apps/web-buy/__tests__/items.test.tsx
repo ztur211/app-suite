@@ -16,6 +16,7 @@ jest.mock('../lib/api', () => ({
     update: jest.fn(),
     remove: jest.fn(),
     sync: jest.fn(),
+    search: jest.fn(),
   },
 }));
 
@@ -48,6 +49,8 @@ beforeEach(() => {
     error: null,
     syncing: false,
     syncSummary: null,
+    results: [],
+    searching: false,
   });
   (useAuth as jest.Mock).mockReturnValue({
     user: { id: 'u1', email: 'test@example.com', name: 'test' },
@@ -171,5 +174,53 @@ describe('Items screen', () => {
       fireEvent.press(out);
     });
     expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('searches products and renders the results', async () => {
+    mockApi.search.mockResolvedValueOnce([
+      {
+        id: 'p1',
+        title: 'Oat Milk',
+        imageUrl: null,
+        price: null,
+        url: null,
+        seller: null,
+        source: 'fake',
+      },
+    ]);
+    const { getByTestId, findByText } = render(<Items />);
+    await waitFor(() => expect(getByTestId('search-input')).toBeTruthy());
+    fireEvent.changeText(getByTestId('search-input'), 'milk');
+    await act(async () => {
+      fireEvent.press(getByTestId('search-btn'));
+    });
+    expect(mockApi.search).toHaveBeenCalledWith('milk');
+    expect(await findByText('Oat Milk')).toBeTruthy();
+  });
+
+  it('adds a search result to the shopping list', async () => {
+    mockApi.search.mockResolvedValueOnce([
+      {
+        id: 'p1',
+        title: 'Oat Milk',
+        imageUrl: null,
+        price: null,
+        url: null,
+        seller: null,
+        source: 'fake',
+      },
+    ]);
+    mockApi.create.mockResolvedValueOnce(makeItem({ id: 'new', title: 'Oat Milk' }));
+    const { getByTestId, findByTestId } = render(<Items />);
+    await waitFor(() => expect(getByTestId('search-input')).toBeTruthy());
+    fireEvent.changeText(getByTestId('search-input'), 'milk');
+    await act(async () => {
+      fireEvent.press(getByTestId('search-btn'));
+    });
+    const addBtn = await findByTestId('add-result-p1');
+    await act(async () => {
+      fireEvent.press(addBtn);
+    });
+    expect(mockApi.create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Oat Milk' }));
   });
 });

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { itemsApi, type ItemCreate, type ItemUpdate } from '../lib/api';
-import type { ShoppingItem } from '../lib/types';
+import type { ProductResult, ShoppingItem } from '../lib/types';
 
 export interface ItemsState {
   items: ShoppingItem[];
@@ -8,11 +8,17 @@ export interface ItemsState {
   error: string | null;
   syncing: boolean;
   syncSummary: { created: number; consumed: number } | null;
+  results: ProductResult[];
+  searching: boolean;
   refresh: () => Promise<void>;
   create: (data: ItemCreate) => Promise<void>;
   update: (id: string, partial: ItemUpdate) => Promise<void>;
   remove: (id: string) => Promise<void>;
   sync: () => Promise<void>;
+  /** Run an external product search; populates `results`. */
+  search: (query: string) => Promise<void>;
+  /** Add a search result to the list, then drop it from `results`. */
+  addResult: (result: ProductResult) => Promise<void>;
   byId: (id: string) => ShoppingItem | undefined;
 }
 
@@ -22,6 +28,8 @@ export const useItems = create<ItemsState>((set, get) => ({
   error: null,
   syncing: false,
   syncSummary: null,
+  results: [],
+  searching: false,
   refresh: async () => {
     set({ loading: true, error: null });
     try {
@@ -58,8 +66,29 @@ export const useItems = create<ItemsState>((set, get) => ({
       set({ error: (e as Error).message, syncing: false });
     }
   },
+  search: async (query) => {
+    set({ searching: true, error: null });
+    try {
+      const results = await itemsApi.search(query);
+      set({ results, searching: false });
+    } catch (e) {
+      set({ error: (e as Error).message, searching: false });
+    }
+  },
+  addResult: async (result) => {
+    await get().create(resultToCreate(result));
+    set((state) => ({ results: state.results.filter((r) => r.id !== result.id) }));
+  },
   byId: (id) => get().items.find((t) => t.id === id),
 }));
+
+/** Map a search result to the fields we persist as a ShoppingItem. */
+function resultToCreate(r: ProductResult): ItemCreate {
+  const detail = [r.price ? `${r.price.currency} ${r.price.amount}` : null, r.seller]
+    .filter(Boolean)
+    .join(' · ');
+  return { title: r.title, notes: detail || null };
+}
 
 function mergeOptimistic(partial: ItemUpdate): Partial<ShoppingItem> {
   const out: Partial<ShoppingItem> = {};

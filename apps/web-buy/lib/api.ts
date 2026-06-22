@@ -1,5 +1,5 @@
 import { apiRequest } from '@things/web-kit';
-import type { ShoppingItem } from './types';
+import type { ProductResult, ShoppingItem } from './types';
 
 const BUY_URL = process.env.EXPO_PUBLIC_BUY_URL ?? 'http://localhost:3004';
 
@@ -32,4 +32,9 @@ export const itemsApi = {
     apiRequest<{ ok: boolean }>(`${BUY_URL}/items/${id}`, { method: 'DELETE' }),
   sync: () =>
     apiRequest<{ created: number; consumed: number }>(`${BUY_URL}/sync`, { method: 'POST' }),
+  search: (query: string, limit?: number) =>
+    apiRequest<ProductResult[]>(`${BUY_URL}/items/search`, {
+      method: 'POST',
+      body: JSON.stringify({ query, limit }),
+    }),
 };

@@ -29,9 +29,24 @@ const filterLabels: Record<Filter, string> = {
 export default function Items() {
   const router = useRouter();
   const { signOut, user } = useAuth();
-  const { items, loading, error, syncing, syncSummary, refresh, create, update, remove, sync } =
-    useItems();
+  const {
+    items,
+    loading,
+    error,
+    syncing,
+    syncSummary,
+    results,
+    searching,
+    refresh,
+    create,
+    update,
+    remove,
+    sync,
+    search,
+    addResult,
+  } = useItems();
   const [filter, setFilter] = useState<Filter>('active');
+  const [query, setQuery] = useState('');
 
   const { control, handleSubmit, reset } = useForm<NewItemForm>({
     resolver: zodResolver(newItemSchema),
@@ -51,6 +66,11 @@ export default function Items() {
 
   const toggleBought = (t: ShoppingItem) =>
     update(t.id, { status: t.status === 'bought' ? 'active' : 'bought' });
+
+  const onSearch = async () => {
+    const q = query.trim();
+    if (q) await search(q);
+  };
 
   return (
     <View style={{ flex: 1, padding: tokens.space[6], gap: tokens.space[4] }}>
@@ -92,6 +112,65 @@ export default function Items() {
             />
           </View>
           <Button label="Add" onPress={add} variant="primary" testID="item-add-btn" />
+        </View>
+      </Card>
+
+      <Card>
+        <View style={{ gap: tokens.space[2] }}>
+          <View style={{ flexDirection: 'row', gap: tokens.space[2], alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                placeholder="Search products to buy…"
+                value={query}
+                onChangeText={setQuery}
+                onSubmitEditing={onSearch}
+                testID="search-input"
+              />
+            </View>
+            <Button
+              label={searching ? 'Finding…' : 'Find'}
+              onPress={onSearch}
+              variant="secondary"
+              testID="search-btn"
+            />
+          </View>
+          {searching ? (
+            <ActivityIndicator color={tokens.colors.apps.buy} testID="searching" />
+          ) : null}
+          {results.length > 0 ? (
+            <View style={{ gap: tokens.space[2] }} testID="search-results">
+              {results.map((r) => (
+                <View
+                  key={r.id}
+                  testID={`result-${r.id}`}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: tokens.space[2],
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Heading level={4}>{r.title}</Heading>
+                    {r.price ? (
+                      <Heading level={4}>
+                        {r.price.currency} {r.price.amount}
+                        {r.seller ? ` · ${r.seller}` : ''}
+                      </Heading>
+                    ) : r.seller ? (
+                      <Heading level={4}>{r.seller}</Heading>
+                    ) : null}
+                  </View>
+                  <Button
+                    label="Add"
+                    onPress={() => addResult(r)}
+                    variant="primary"
+                    testID={`add-result-${r.id}`}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
       </Card>
 

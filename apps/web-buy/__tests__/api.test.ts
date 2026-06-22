@@ -61,4 +61,13 @@ describe('itemsApi', () => {
     expect(init.method).toBe('POST');
     expect(summary).toEqual({ created: 2, consumed: 3 });
   });
+
+  it('search calls POST /items/search with the query and limit', async () => {
+    mockFetch.mockResolvedValueOnce(makeResponse([{ id: 'p1', title: 'Oat Milk' }]));
+    await itemsApi.search('milk', 5);
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://localhost:3004/items/search');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ query: 'milk', limit: 5 });
+  });
 });
